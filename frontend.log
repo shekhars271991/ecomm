@@ -1,0 +1,30 @@
+/Users/ssuman/rampup/venv/lib/python3.9/site-packages/urllib3/__init__.py:35: NotOpenSSLWarning: urllib3 v2 only supports OpenSSL 1.1.1+, currently the 'ssl' module is compiled with 'LibreSSL 2.8.3'. See: https://github.com/urllib3/urllib3/issues/3020
+  warnings.warn(
+ * Serving Flask app 'frontend_app'
+ * Debug mode: on
+[31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on http://127.0.0.1:5000
+[33mPress CTRL+C to quit[0m
+ * Restarting with stat
+/Users/ssuman/rampup/venv/lib/python3.9/site-packages/urllib3/__init__.py:35: NotOpenSSLWarning: urllib3 v2 only supports OpenSSL 1.1.1+, currently the 'ssl' module is compiled with 'LibreSSL 2.8.3'. See: https://github.com/urllib3/urllib3/issues/3020
+  warnings.warn(
+ * Debugger is active!
+ * Debugger PIN: 318-484-797
+127.0.0.1 - - [08/Jul/2025 23:39:15] "GET / HTTP/1.1" 200 -
+127.0.0.1 - - [08/Jul/2025 23:39:23] "GET / HTTP/1.1" 200 -
+127.0.0.1 - - [08/Jul/2025 23:39:23] "[36mGET /static/css/style.css HTTP/1.1[0m" 304 -
+127.0.0.1 - - [08/Jul/2025 23:39:23] "GET /static/js/demo.js HTTP/1.1" 200 -
+127.0.0.1 - - [08/Jul/2025 23:39:25] "GET / HTTP/1.1" 200 -
+127.0.0.1 - - [08/Jul/2025 23:39:25] "[36mGET /static/css/style.css HTTP/1.1[0m" 304 -
+127.0.0.1 - - [08/Jul/2025 23:39:25] "[36mGET /static/js/demo.js HTTP/1.1[0m" 304 -
+127.0.0.1 - - [08/Jul/2025 23:39:32] "GET /products?category=3 HTTP/1.1" 200 -
+127.0.0.1 - - [08/Jul/2025 23:39:32] "[36mGET /static/css/style.css HTTP/1.1[0m" 304 -
+127.0.0.1 - - [08/Jul/2025 23:39:32] "[36mGET /static/js/demo.js HTTP/1.1[0m" 304 -
+127.0.0.1 - - [08/Jul/2025 23:39:38] "[32mPOST /add_to_cart/5 HTTP/1.1[0m" 302 -
+127.0.0.1 - - [08/Jul/2025 23:39:38] "GET /products HTTP/1.1" 200 -
+127.0.0.1 - - [08/Jul/2025 23:39:38] "[36mGET /static/css/style.css HTTP/1.1[0m" 304 -
+127.0.0.1 - - [08/Jul/2025 23:39:38] "[36mGET /static/js/demo.js HTTP/1.1[0m" 304 -
+127.0.0.1 - - [08/Jul/2025 23:39:51] "[32mPOST /add_to_cart/2 HTTP/1.1[0m" 302 -
+127.0.0.1 - - [08/Jul/2025 23:39:51] "GET /products HTTP/1.1" 200 -
+127.0.0.1 - - [08/Jul/2025 23:39:51] "[36mGET /static/css/style.css HTTP/1.1[0m" 304 -
+127.0.0.1 - - [08/Jul/2025 23:39:51] "[36mGET /static/js/demo.js HTTP/1.1[0m" 304 -
