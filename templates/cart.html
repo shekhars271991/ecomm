@@ -23,7 +23,7 @@
                         <p class="text-success fw-bold">${{ "%.2f"|format(item.product.price) }} each</p>
                     </div>
                     <div class="col-md-3">
-                        <form method="POST" action="{{ url_for('update_cart', product_id=item.product.id) }}" class="d-flex align-items-center">
+                        <form method="POST" action="{{ url_for('update_cart', item_id=item.id) }}" class="d-flex align-items-center">
                             <label class="me-2">Qty:</label>
                             <input type="number" name="quantity" value="{{ item.quantity }}" min="1" max="{{ item.product.stock }}" class="quantity-input me-2">
                             <button type="submit" class="btn btn-sm btn-outline-primary">
@@ -35,7 +35,7 @@
                         <p class="fw-bold text-success">${{ "%.2f"|format(item.total) }}</p>
                     </div>
                     <div class="col-md-1">
-                        <a href="{{ url_for('remove_from_cart', product_id=item.product.id) }}" class="btn btn-sm btn-outline-danger">
+                        <a href="{{ url_for('remove_from_cart', item_id=item.id) }}" class="btn btn-sm btn-outline-danger">
                             <i class="fas fa-trash"></i>
                         </a>
                     </div>

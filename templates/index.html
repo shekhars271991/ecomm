@@ -17,7 +17,7 @@
         {% for category in categories %}
         <div class="col-md-4 col-lg-2 mb-4">
             <a href="{{ url_for('products', category=category.id) }}" class="category-card d-block">
-                <div class="category-icon">{{ category.icon }}</div>
+                <div class="category-icon"><i class="{{ category.icon }}"></i></div>
                 <h6>{{ category.name }}</h6>
             </a>
         </div>

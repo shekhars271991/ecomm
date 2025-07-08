@@ -52,9 +52,11 @@ class DatabaseDemo {
             setTimeout(() => {
                 const panel = document.getElementById('demo-panel');
                 const toggle = document.getElementById('demo-toggle');
+                const body = document.body;
                 
                 if (panel && toggle) {
                     panel.classList.add('visible');
+                    body.classList.add('demo-panel-open');
                     toggle.innerHTML = '<i class="fas fa-eye-slash"></i> Hide';
                 }
                 this.renderQueries();
@@ -126,13 +128,16 @@ class DatabaseDemo {
     togglePanel() {
         const panel = document.getElementById('demo-panel');
         const toggle = document.getElementById('demo-toggle');
+        const body = document.body;
         
         if (this.isVisible) {
             panel.classList.remove('visible');
+            body.classList.remove('demo-panel-open');
             toggle.innerHTML = '<i class="fas fa-database"></i> DB Log';
             this.isVisible = false;
         } else {
             panel.classList.add('visible');
+            body.classList.add('demo-panel-open');
             toggle.innerHTML = '<i class="fas fa-eye-slash"></i> Hide';
             this.isVisible = true;
             // Refresh data when panel is opened

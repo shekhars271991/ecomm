@@ -14,7 +14,7 @@
                     </a>
                     {% for category in categories %}
                     <a href="{{ url_for('products', category=category.id) }}" class="filter-option {{ 'active' if current_category == category.id else '' }}">
-                        {{ category.icon }} {{ category.name }}
+                        <i class="{{ category.icon }}"></i> {{ category.name }}
                     </a>
                     {% endfor %}
                 </div>
@@ -27,7 +27,7 @@
                     {% if current_category %}
                         {% for category in categories %}
                             {% if category.id == current_category %}
-                                {{ category.icon }} {{ category.name }}
+                                <i class="{{ category.icon }}"></i> {{ category.name }}
                             {% endif %}
                         {% endfor %}
                     {% else %}

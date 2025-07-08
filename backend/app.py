@@ -243,6 +243,29 @@ class DbLog(db.Model):
             'timestamp': self.timestamp.strftime('%H:%M:%S')
         }
 
+class Cart(db.Model):
+    __tablename__ = 'cart'
+    id = db.Column(db.Integer, primary_key=True)
+    user_session = db.Column(db.String(255), nullable=False)  # Session ID to track cart
+    product_id = db.Column(db.Integer, db.ForeignKey('products.id'), nullable=False)
+    quantity = db.Column(db.Integer, nullable=False, default=1)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    product = db.relationship('Product', backref='cart_items', lazy=True)
+    
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'user_session': self.user_session,
+            'product_id': self.product_id,
+            'quantity': self.quantity,
+            'product': self.product.to_dict() if self.product else None,
+            'total': float(self.product.price * self.quantity) if self.product else 0,
+            'created_at': self.created_at.isoformat(),
+            'updated_at': self.updated_at.isoformat()
+        }
+
 # -------------------------------
 # API RESOURCES
 # -------------------------------
@@ -392,22 +415,170 @@ class ProductResource(Resource):
         return create_api_response({'product': product_data})
 
 class CartResource(Resource):
-    def post(self):
-        data = request.get_json()
+    def get(self):
+        # Get cart items for current session
+        session_id = request.args.get('session_id')
         
-        if not data or 'product_id' not in data:
-            return create_api_response(None, False, "Product ID is required"), 400
+        if not session_id:
+            return create_api_response(None, False, "Session ID is required"), 400
         
         start_time = time.time()
-        product = Product.query.get(data['product_id'])
+        cart_items = Cart.query.filter_by(user_session=session_id).all()
         end_time = time.time()
         
-        db_tracker.log_query('SELECT', f"SELECT * FROM products WHERE id = {data['product_id']}", start_time, end_time, 1 if product else 0)
+        db_tracker.log_query('SELECT', f"SELECT * FROM cart WHERE user_session = '{session_id}'", start_time, end_time, len(cart_items))
+        
+        processed_cart_items = []
+        total = 0
+        
+        for cart_item in cart_items:
+            item_dict = cart_item.to_dict()
+            processed_cart_items.append(item_dict)
+            total += item_dict['total']
+        
+        return create_api_response({
+            'cart_items': processed_cart_items,
+            'total': total
+        }, True, "Cart retrieved successfully")
+    
+    def post(self):
+        # Add item to cart
+        data = request.get_json()
+        
+        if not data or 'session_id' not in data or 'product_id' not in data:
+            return create_api_response(None, False, "Session ID and product ID are required"), 400
+        
+        session_id = data['session_id']
+        product_id = data['product_id']
+        quantity = data.get('quantity', 1)
+        
+        # Check if product exists
+        start_time = time.time()
+        product = Product.query.get(product_id)
+        end_time = time.time()
+        
+        db_tracker.log_query('SELECT', f"SELECT * FROM products WHERE id = {product_id}", start_time, end_time, 1 if product else 0)
         
         if not product:
             return create_api_response(None, False, "Product not found"), 404
         
-        return create_api_response({'message': 'Item added to cart'}, True, "Added to cart successfully")
+        # Check if item already exists in cart
+        start_time = time.time()
+        existing_cart_item = Cart.query.filter_by(user_session=session_id, product_id=product_id).first()
+        end_time = time.time()
+        
+        db_tracker.log_query('SELECT', f"SELECT * FROM cart WHERE user_session = '{session_id}' AND product_id = {product_id}", start_time, end_time, 1 if existing_cart_item else 0)
+        
+        if existing_cart_item:
+            # Update existing item
+            existing_cart_item.quantity += quantity
+            existing_cart_item.updated_at = datetime.utcnow()
+            
+            start_time = time.time()
+            db.session.commit()
+            end_time = time.time()
+            
+            db_tracker.log_query('UPDATE', f"UPDATE cart SET quantity = {existing_cart_item.quantity} WHERE id = {existing_cart_item.id}", start_time, end_time, 1)
+        else:
+            # Add new item
+            new_cart_item = Cart(
+                user_session=session_id,
+                product_id=product_id,
+                quantity=quantity
+            )
+            
+            start_time = time.time()
+            db.session.add(new_cart_item)
+            db.session.commit()
+            end_time = time.time()
+            
+            db_tracker.log_query('INSERT', f"INSERT INTO cart (user_session, product_id, quantity) VALUES ('{session_id}', {product_id}, {quantity})", start_time, end_time, 1)
+        
+        return create_api_response({
+            'message': f'{product.name} added to cart',
+            'product': product.to_dict()
+        }, True, "Item added to cart successfully")
+    
+    def delete(self):
+        # Clear cart for session
+        session_id = request.args.get('session_id')
+        
+        if not session_id:
+            return create_api_response(None, False, "Session ID is required"), 400
+        
+        start_time = time.time()
+        cart_items = Cart.query.filter_by(user_session=session_id).all()
+        item_count = len(cart_items)
+        
+        for item in cart_items:
+            db.session.delete(item)
+        
+        db.session.commit()
+        end_time = time.time()
+        
+        db_tracker.log_query('DELETE', f"DELETE FROM cart WHERE user_session = '{session_id}'", start_time, end_time, item_count)
+        
+        return create_api_response(None, True, "Cart cleared successfully")
+
+class CartItemResource(Resource):
+    def delete(self, item_id):
+        # Remove specific item from cart
+        start_time = time.time()
+        cart_item = Cart.query.get(item_id)
+        end_time = time.time()
+        
+        db_tracker.log_query('SELECT', f"SELECT * FROM cart WHERE id = {item_id}", start_time, end_time, 1 if cart_item else 0)
+        
+        if not cart_item:
+            return create_api_response(None, False, "Cart item not found"), 404
+        
+        product_name = cart_item.product.name if cart_item.product else "Unknown"
+        
+        start_time = time.time()
+        db.session.delete(cart_item)
+        db.session.commit()
+        end_time = time.time()
+        
+        db_tracker.log_query('DELETE', f"DELETE FROM cart WHERE id = {item_id}", start_time, end_time, 1)
+        
+        return create_api_response({
+            'message': f'{product_name} removed from cart'
+        }, True, "Item removed from cart successfully")
+    
+    def put(self, item_id):
+        # Update cart item quantity
+        data = request.get_json()
+        
+        if not data or 'quantity' not in data:
+            return create_api_response(None, False, "Quantity is required"), 400
+        
+        quantity = data['quantity']
+        
+        if quantity <= 0:
+            return create_api_response(None, False, "Quantity must be greater than 0"), 400
+        
+        start_time = time.time()
+        cart_item = Cart.query.get(item_id)
+        end_time = time.time()
+        
+        db_tracker.log_query('SELECT', f"SELECT * FROM cart WHERE id = {item_id}", start_time, end_time, 1 if cart_item else 0)
+        
+        if not cart_item:
+            return create_api_response(None, False, "Cart item not found"), 404
+        
+        cart_item.quantity = quantity
+        cart_item.updated_at = datetime.utcnow()
+        
+        start_time = time.time()
+        db.session.commit()
+        end_time = time.time()
+        
+        db_tracker.log_query('UPDATE', f"UPDATE cart SET quantity = {quantity} WHERE id = {item_id}", start_time, end_time, 1)
+        
+        return create_api_response({
+            'message': 'Cart updated',
+            'cart_item': cart_item.to_dict()
+        }, True, "Cart item updated successfully")
 
 class OrdersResource(Resource):
     def post(self):
@@ -551,6 +722,7 @@ api.add_resource(ProductsResource, '/api/products')
 api.add_resource(ProductResource, '/api/products/<int:product_id>')
 api.add_resource(OrdersResource, '/api/orders')
 api.add_resource(CartResource, '/api/cart')
+api.add_resource(CartItemResource, '/api/cart/<int:item_id>')
 api.add_resource(DebugResource, '/api/debug')
 api.add_resource(DbLogsResource, '/api/db-logs')
 
@@ -562,20 +734,53 @@ if __name__ == '__main__':
     with app.app_context():
         db.create_all()
         
-        # Add sample data if not exists
+        # Clear cart table on startup
+        start_time = time.time()
+        cart_items = Cart.query.all()
+        item_count = len(cart_items)
+        
+        for item in cart_items:
+            db.session.delete(item)
+        
+        db.session.commit()
+        end_time = time.time()
+        
+        if item_count > 0:
+            db_tracker.log_query('DELETE', f"DELETE FROM cart (cleared {item_count} items on startup)", start_time, end_time, item_count)
+        
+        # Add sample data if not exists or update existing categories with proper icons
+        categories_data = [
+            ('Fruits & Vegetables', 'fas fa-carrot'),
+            ('Dairy & Eggs', 'fas fa-glass-whiskey'),
+            ('Meat & Seafood', 'fas fa-drumstick-bite'),
+            ('Bakery', 'fas fa-bread-slice'),
+            ('Beverages', 'fas fa-coffee'),
+            ('Snacks', 'fas fa-cookie-bite')
+        ]
+        
         if Category.query.count() == 0:
-            categories = [
-                Category(name='Fruits & Vegetables', icon='🥕'),
-                Category(name='Dairy & Eggs', icon='🥛'),
-                Category(name='Meat & Seafood', icon='🥩'),
-                Category(name='Bakery', icon='🍞'),
-                Category(name='Beverages', icon='🥤'),
-                Category(name='Snacks', icon='🍿')
-            ]
-            
-            for category in categories:
+            # Create new categories
+            for name, icon in categories_data:
+                category = Category(name=name, icon=icon)
                 db.session.add(category)
             db.session.commit()
+        else:
+            # Update existing categories with proper icons
+            for name, icon in categories_data:
+                start_time = time.time()
+                category = Category.query.filter_by(name=name).first()
+                end_time = time.time()
+                
+                db_tracker.log_query('SELECT', f"SELECT * FROM categories WHERE name = '{name}'", start_time, end_time, 1 if category else 0)
+                
+                if category and category.icon != icon:
+                    category.icon = icon
+                    
+                    start_time = time.time()
+                    db.session.commit()
+                    end_time = time.time()
+                    
+                    db_tracker.log_query('UPDATE', f"UPDATE categories SET icon = '{icon}' WHERE name = '{name}'", start_time, end_time, 1)
             
             # Add sample products
             products = [

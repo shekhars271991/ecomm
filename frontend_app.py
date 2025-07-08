@@ -1,9 +1,15 @@
 from flask import Flask, render_template, request, jsonify, session, redirect, url_for, flash
 import requests
 import json
+import uuid
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'your-secret-key-here'
+
+# Context processor to make cart count available in templates
+@app.context_processor
+def inject_cart_count():
+    return {'get_cart_count': get_cart_count}
 
 # Backend API URL
 API_BASE_URL = 'http://localhost:5001/api'
@@ -11,6 +17,24 @@ API_BASE_URL = 'http://localhost:5001/api'
 # -------------------------------
 # UTILITY FUNCTIONS
 # -------------------------------
+
+def get_session_id():
+    """Get or create a session ID for cart tracking"""
+    if 'session_id' not in session:
+        session['session_id'] = str(uuid.uuid4())
+        session.modified = True
+    return session['session_id']
+
+def get_cart_count():
+    """Get total number of items in cart for badge"""
+    session_id = get_session_id()
+    cart_data, success = make_api_request('cart', method='GET', params={'session_id': session_id})
+    
+    if success:
+        cart_items = cart_data.get('data', {}).get('cart_items', [])
+        return sum(item.get('quantity', 0) for item in cart_items)
+    
+    return 0
 
 def make_api_request(endpoint, method='GET', data=None, params=None):
     """Make API request to backend"""
@@ -82,25 +106,14 @@ def product_detail(product_id):
 
 @app.route('/cart')
 def cart():
-    if 'cart' not in session:
-        session['cart'] = {}
+    session_id = get_session_id()
     
-    # Convert cart to API format
-    cart_items = []
-    for product_id, quantity in session['cart'].items():
-        cart_items.append({
-            'product_id': int(product_id),
-            'quantity': quantity
-        })
+    # Get cart items from database
+    cart_data, success = make_api_request('cart', method='GET', params={'session_id': session_id})
     
-    if cart_items:
-        cart_data, success = make_api_request('cart', method='POST', data={'cart_items': cart_items})
-        if success:
-            cart_items = cart_data.get('cart_items', [])
-            total = cart_data.get('total', 0)
-        else:
-            cart_items = []
-            total = 0
+    if success:
+        cart_items = cart_data.get('data', {}).get('cart_items', [])
+        total = cart_data.get('data', {}).get('total', 0)
     else:
         cart_items = []
         total = 0
@@ -109,49 +122,50 @@ def cart():
 
 @app.route('/add_to_cart/<int:product_id>', methods=['POST'])
 def add_to_cart(product_id):
+    session_id = get_session_id()
     quantity = int(request.form.get('quantity', 1))
     
-    if 'cart' not in session:
-        session['cart'] = {}
+    # Add item to cart via API
+    cart_data, success = make_api_request('cart', method='POST', data={
+        'session_id': session_id,
+        'product_id': product_id,
+        'quantity': quantity
+    })
     
-    product_id_str = str(product_id)
-    if product_id_str in session['cart']:
-        session['cart'][product_id_str] += quantity
+    if success:
+        message = cart_data.get('data', {}).get('message', 'Item added to cart')
+        flash(message, 'success')
     else:
-        session['cart'][product_id_str] = quantity
-    
-    session.modified = True
-    
-    # Get product name for flash message
-    product_data, success = make_api_request(f'products/{product_id}')
-    if success and product_data:
-        product = product_data.get('product', {})
-        product_name = product.get('name', 'Product') if product else 'Product'
-        flash(f'{product_name} added to cart!', 'success')
+        flash('Error adding item to cart', 'error')
     
     return redirect(url_for('products'))
 
-@app.route('/remove_from_cart/<int:product_id>')
-def remove_from_cart(product_id):
-    if 'cart' in session:
-        product_id_str = str(product_id)
-        if product_id_str in session['cart']:
-            del session['cart'][product_id_str]
-            session.modified = True
-            flash('Item removed from cart!', 'success')
+@app.route('/remove_from_cart/<int:item_id>')
+def remove_from_cart(item_id):
+    # Remove item from cart via API
+    cart_data, success = make_api_request(f'cart/{item_id}', method='DELETE')
+    
+    if success:
+        message = cart_data.get('data', {}).get('message', 'Item removed from cart')
+        flash(message, 'success')
+    else:
+        flash('Error removing item from cart', 'error')
+    
     return redirect(url_for('cart'))
 
-@app.route('/update_cart/<int:product_id>', methods=['POST'])
-def update_cart(product_id):
+@app.route('/update_cart/<int:item_id>', methods=['POST'])
+def update_cart(item_id):
     quantity = int(request.form.get('quantity', 1))
     
-    if 'cart' in session:
-        product_id_str = str(product_id)
-        if quantity > 0:
-            session['cart'][product_id_str] = quantity
-        else:
-            del session['cart'][product_id_str]
-        session.modified = True
+    # Update cart item via API
+    cart_data, success = make_api_request(f'cart/{item_id}', method='PUT', data={
+        'quantity': quantity
+    })
+    
+    if success:
+        flash('Cart updated!', 'success')
+    else:
+        flash('Error updating cart', 'error')
     
     return redirect(url_for('cart'))
 
@@ -161,20 +175,21 @@ def checkout():
         flash('Please login to checkout', 'error')
         return redirect(url_for('login'))
     
-    if 'cart' not in session or not session['cart']:
-        flash('Your cart is empty', 'error')
+    session_id = get_session_id()
+    
+    # Get cart items from database
+    cart_data, success = make_api_request('cart', method='GET', params={'session_id': session_id})
+    
+    if success:
+        cart_items = cart_data.get('data', {}).get('cart_items', [])
+        total = cart_data.get('data', {}).get('total', 0)
+        
+        if not cart_items:
+            flash('Your cart is empty', 'error')
+            return redirect(url_for('cart'))
+    else:
+        flash('Error loading cart', 'error')
         return redirect(url_for('cart'))
-    
-    # Calculate total using cart API
-    cart_items = []
-    for product_id, quantity in session['cart'].items():
-        cart_items.append({
-            'product_id': int(product_id),
-            'quantity': quantity
-        })
-    
-    cart_data, success = make_api_request('cart', method='POST', data={'cart_items': cart_items})
-    total = cart_data.get('total', 0) if success else 0
     
     user = session.get('user_data', {})
     return render_template('checkout.html', total=total, user=user)
