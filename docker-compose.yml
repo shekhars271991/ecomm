@@ -20,5 +20,26 @@ services:
       timeout: 20s
       retries: 10
 
+  aerospike:
+    image: aerospike/aerospike-server-enterprise:8.1
+    container_name: grocery_aerospike
+    environment:
+      NAMESPACE: grocery
+      REPLICATION_FACTOR: 1
+      MEM_GB: 1
+      DEFAULT_TTL: 0
+      FEATURE_KEY_FILE: /etc/aerospike/features.conf
+    ports:
+      - "3000:3000"
+    volumes:
+      - aerospike_data:/opt/aerospike/data
+      - ./aerospike.conf:/etc/aerospike/aerospike.conf
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "asadm", "-e", "info"]
+      timeout: 20s
+      retries: 10
+
 volumes:
-  mysql_data: 
+  mysql_data:
+  aerospike_data: 

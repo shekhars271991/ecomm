@@ -38,6 +38,21 @@
                     </div>
                 </form>
                 
+                <!-- Database Selection Button -->
+                <div class="dropdown me-3">
+                    <button class="btn btn-outline-light dropdown-toggle" type="button" id="dbDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                        <i class="fas fa-database"></i> <span id="current-db">MySQL</span>
+                    </button>
+                    <ul class="dropdown-menu" aria-labelledby="dbDropdown">
+                        <li><a class="dropdown-item" href="#" onclick="switchDatabase('mysql')">
+                            <i class="fas fa-database"></i> MySQL
+                        </a></li>
+                        <li><a class="dropdown-item" href="#" onclick="switchDatabase('aerospike')">
+                            <i class="fas fa-server"></i> Aerospike Enterprise
+                        </a></li>
+                    </ul>
+                </div>
+                
                 <ul class="navbar-nav">
                     <li class="nav-item">
                         <a class="nav-link position-relative" href="{{ url_for('cart') }}">
@@ -118,20 +133,97 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     <script src="{{ url_for('static', filename='js/demo.js') }}"></script>
     
+    <!-- Database Switching Script -->
+    <script>
+        // Function to switch database
+        function switchDatabase(dbType) {
+            // Show loading state
+            const dbButton = document.getElementById('current-db');
+            const originalText = dbButton.textContent;
+            dbButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Switching...';
+            
+            // Make API call to switch database
+            fetch('/api/database-switch', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ database: dbType })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Update button text
+                    dbButton.textContent = dbType === 'mysql' ? 'MySQL' : 'Aerospike Enterprise';
+                    
+                    // Show success message
+                    showAlert('success', data.message);
+                    
+                    // Refresh the page to show new data
+                    setTimeout(() => {
+                        location.reload();
+                    }, 1000);
+                } else {
+                    // Show error message
+                    showAlert('danger', data.message);
+                    dbButton.textContent = originalText;
+                }
+            })
+            .catch(error => {
+                console.error('Error switching database:', error);
+                showAlert('danger', 'Failed to switch database. Please try again.');
+                dbButton.textContent = originalText;
+            });
+        }
+        
+        // Function to show alert messages
+        function showAlert(type, message) {
+            const alertHtml = `
+                <div class="alert alert-${type} alert-dismissible fade show" role="alert">
+                    ${message}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            `;
+            
+            const mainContainer = document.querySelector('main.container');
+            mainContainer.insertAdjacentHTML('afterbegin', alertHtml);
+            
+            // Auto-hide success alerts after 3 seconds
+            if (type === 'success') {
+                setTimeout(() => {
+                    const alert = mainContainer.querySelector('.alert-success');
+                    if (alert) {
+                        alert.remove();
+                    }
+                }, 3000);
+            }
+        }
+        
+        // Get current database on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            fetch('/api/database-switch')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        const dbButton = document.getElementById('current-db');
+                        dbButton.textContent = data.data.current_database === 'mysql' ? 'MySQL' : 'Aerospike Enterprise';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error getting current database:', error);
+                });
+        });
+    </script>
+    
     <!-- Handle broken images -->
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            // Handle broken images
-            const images = document.querySelectorAll('.product-image');
-            images.forEach(img => {
-                img.addEventListener('error', function() {
-                    this.classList.add('broken');
-                    this.style.display = 'flex';
-                });
-                
-                img.addEventListener('load', function() {
-                    this.classList.remove('broken');
-                });
+            const images = document.querySelectorAll('.product-image, .cart-item-image');
+            images.forEach(function(img) {
+                img.onerror = function() {
+                    this.style.display = 'none';
+                    this.parentElement.classList.add('broken-image');
+                };
             });
         });
     </script>

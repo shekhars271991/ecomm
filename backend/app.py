@@ -7,6 +7,7 @@ import os
 import time
 import logging
 from werkzeug.security import generate_password_hash, check_password_hash
+from database_manager import DatabaseManager
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'your-secret-key-here'
@@ -19,6 +20,9 @@ app.config['DEMO_MODE'] = True
 db = SQLAlchemy(app)
 api = Api(app)
 CORS(app)
+
+# Initialize database manager
+db_manager = DatabaseManager()
 
 # Demo mode: Track database operations
 class DatabaseTracker:
@@ -333,84 +337,33 @@ class UserResource(Resource):
 
 class CategoriesResource(Resource):
     def get(self):
-        start_time = time.time()
-        categories = Category.query.all()
-        end_time = time.time()
-        
-        db_tracker.log_query('SELECT', 'SELECT * FROM categories', start_time, end_time, len(categories))
-        
-        categories_data = []
-        for category in categories:
-            categories_data.append({
-                'id': category.id,
-                'name': category.name,
-                'icon': category.icon
-            })
-        
+        categories_data = db_manager.get_all_categories()
         return create_api_response(categories_data)
 
 class ProductsResource(Resource):
     def get(self):
-        start_time = time.time()
-        
         # Get query parameters
         category_id = request.args.get('category')
         search_term = request.args.get('search')
         
-        # Build query
-        query = Product.query
-        query_description = "SELECT * FROM products"
-        
+        # Convert category_id to int if provided
         if category_id:
-            query = query.filter(Product.category_id == category_id)
-            query_description += f" WHERE category_id = {category_id}"
+            try:
+                category_id = int(category_id)
+            except ValueError:
+                category_id = None
+        else:
+            category_id = None
         
-        if search_term:
-            search_filter = Product.name.contains(search_term)
-            query = query.filter(search_filter)
-            query_description += f" WHERE name LIKE '%{search_term}%'"
-        
-        products = query.all()
-        end_time = time.time()
-        
-        db_tracker.log_query('SELECT', query_description, start_time, end_time, len(products))
-        
-        products_data = []
-        for product in products:
-            products_data.append({
-                'id': product.id,
-                'name': product.name,
-                'description': product.description,
-                'price': float(product.price),
-                'image_url': product.image_url,
-                'stock': product.stock,
-                'category_id': product.category_id,
-                'is_available': product.is_available
-            })
-        
+        products_data = db_manager.get_all_products(category_id, search_term)
         return create_api_response(products_data)
 
 class ProductResource(Resource):
     def get(self, product_id):
-        start_time = time.time()
-        product = Product.query.get(product_id)
-        end_time = time.time()
+        product_data = db_manager.get_product_by_id(product_id)
         
-        db_tracker.log_query('SELECT', f'SELECT * FROM products WHERE id = {product_id}', start_time, end_time, 1 if product else 0)
-        
-        if not product:
+        if not product_data:
             return create_api_response(None, False, "Product not found"), 404
-        
-        product_data = {
-            'id': product.id,
-            'name': product.name,
-            'description': product.description,
-            'price': float(product.price),
-            'image_url': product.image_url,
-            'stock': product.stock,
-            'category_id': product.category_id,
-            'is_available': product.is_available
-        }
         
         return create_api_response({'product': product_data})
 
@@ -422,19 +375,14 @@ class CartResource(Resource):
         if not session_id:
             return create_api_response(None, False, "Session ID is required"), 400
         
-        start_time = time.time()
-        cart_items = Cart.query.filter_by(user_session=session_id).all()
-        end_time = time.time()
-        
-        db_tracker.log_query('SELECT', f"SELECT * FROM cart WHERE user_session = '{session_id}'", start_time, end_time, len(cart_items))
+        cart_items = db_manager.get_cart_items(session_id)
         
         processed_cart_items = []
         total = 0
         
         for cart_item in cart_items:
-            item_dict = cart_item.to_dict()
-            processed_cart_items.append(item_dict)
-            total += item_dict['total']
+            processed_cart_items.append(cart_item)
+            total += cart_item.get('total', 0)
         
         return create_api_response({
             'cart_items': processed_cart_items,
@@ -452,52 +400,15 @@ class CartResource(Resource):
         product_id = data['product_id']
         quantity = data.get('quantity', 1)
         
-        # Check if product exists
-        start_time = time.time()
-        product = Product.query.get(product_id)
-        end_time = time.time()
+        result = db_manager.add_to_cart(session_id, product_id, quantity)
         
-        db_tracker.log_query('SELECT', f"SELECT * FROM products WHERE id = {product_id}", start_time, end_time, 1 if product else 0)
-        
-        if not product:
-            return create_api_response(None, False, "Product not found"), 404
-        
-        # Check if item already exists in cart
-        start_time = time.time()
-        existing_cart_item = Cart.query.filter_by(user_session=session_id, product_id=product_id).first()
-        end_time = time.time()
-        
-        db_tracker.log_query('SELECT', f"SELECT * FROM cart WHERE user_session = '{session_id}' AND product_id = {product_id}", start_time, end_time, 1 if existing_cart_item else 0)
-        
-        if existing_cart_item:
-            # Update existing item
-            existing_cart_item.quantity += quantity
-            existing_cart_item.updated_at = datetime.utcnow()
-            
-            start_time = time.time()
-            db.session.commit()
-            end_time = time.time()
-            
-            db_tracker.log_query('UPDATE', f"UPDATE cart SET quantity = {existing_cart_item.quantity} WHERE id = {existing_cart_item.id}", start_time, end_time, 1)
+        if result['success']:
+            return create_api_response({
+                'message': result['message'],
+                'product': result['product']
+            }, True, "Item added to cart successfully")
         else:
-            # Add new item
-            new_cart_item = Cart(
-                user_session=session_id,
-                product_id=product_id,
-                quantity=quantity
-            )
-            
-            start_time = time.time()
-            db.session.add(new_cart_item)
-            db.session.commit()
-            end_time = time.time()
-            
-            db_tracker.log_query('INSERT', f"INSERT INTO cart (user_session, product_id, quantity) VALUES ('{session_id}', {product_id}, {quantity})", start_time, end_time, 1)
-        
-        return create_api_response({
-            'message': f'{product.name} added to cart',
-            'product': product.to_dict()
-        }, True, "Item added to cart successfully")
+            return create_api_response(None, False, result['message']), 400
     
     def delete(self):
         # Clear cart for session
@@ -506,19 +417,12 @@ class CartResource(Resource):
         if not session_id:
             return create_api_response(None, False, "Session ID is required"), 400
         
-        start_time = time.time()
-        cart_items = Cart.query.filter_by(user_session=session_id).all()
-        item_count = len(cart_items)
+        result = db_manager.clear_cart(session_id)
         
-        for item in cart_items:
-            db.session.delete(item)
-        
-        db.session.commit()
-        end_time = time.time()
-        
-        db_tracker.log_query('DELETE', f"DELETE FROM cart WHERE user_session = '{session_id}'", start_time, end_time, item_count)
-        
-        return create_api_response(None, True, "Cart cleared successfully")
+        if result['success']:
+            return create_api_response(None, True, "Cart cleared successfully")
+        else:
+            return create_api_response(None, False, result['message']), 400
 
 class CartItemResource(Resource):
     def delete(self, item_id):
@@ -712,6 +616,42 @@ class DbLogsResource(Resource):
             db.session.rollback()
             return create_api_response(None, False, f"Failed to clear logs: {str(e)}"), 500
 
+# Database switching endpoint
+class DatabaseSwitchResource(Resource):
+    def get(self):
+        """Get current database type"""
+        current_db = db_manager.get_current_database()
+        return create_api_response({
+            'current_database': current_db,
+            'available_databases': ['mysql', 'aerospike']
+        })
+    
+    def post(self):
+        """Switch database type"""
+        data = request.get_json()
+        
+        if not data or 'database' not in data:
+            return create_api_response(None, False, "Database type is required"), 400
+        
+        db_type = data['database']
+        
+        if db_type not in ['mysql', 'aerospike']:
+            return create_api_response(None, False, "Invalid database type. Must be 'mysql' or 'aerospike'"), 400
+        
+        try:
+            db_manager.set_database(db_type)
+            
+            # If switching to Aerospike, initialize sample data
+            if db_type == 'aerospike':
+                db_manager.init_sample_data()
+            
+            return create_api_response({
+                'current_database': db_type,
+                'message': f'Successfully switched to {db_type} database'
+            }, True, f"Database switched to {db_type}")
+        except Exception as e:
+            return create_api_response(None, False, f"Failed to switch database: {str(e)}"), 500
+
 # -------------------------------
 # REGISTER API ENDPOINTS
 # -------------------------------
@@ -725,6 +665,7 @@ api.add_resource(CartResource, '/api/cart')
 api.add_resource(CartItemResource, '/api/cart/<int:item_id>')
 api.add_resource(DebugResource, '/api/debug')
 api.add_resource(DbLogsResource, '/api/db-logs')
+api.add_resource(DatabaseSwitchResource, '/api/database-switch')
 
 # -------------------------------
 # INITIALIZE DATABASE
@@ -733,6 +674,14 @@ api.add_resource(DbLogsResource, '/api/db-logs')
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()
+        
+        # Initialize database manager
+        models = {
+            'Category': Category,
+            'Product': Product,
+            'Cart': Cart
+        }
+        db_manager.initialize(app, db, db_tracker, models)
         
         # Clear cart table on startup
         start_time = time.time()

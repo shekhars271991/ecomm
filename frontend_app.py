@@ -329,8 +329,28 @@ def register():
 @app.route('/logout')
 def logout():
     session.clear()
-    flash('You have been logged out', 'info')
+    flash('You have been logged out successfully', 'info')
     return redirect(url_for('index'))
+
+@app.route('/api/database-switch', methods=['GET', 'POST'])
+def database_switch():
+    """Proxy route for database switching"""
+    if request.method == 'GET':
+        # Get current database type
+        db_data, success = make_api_request('database-switch')
+        if success:
+            return jsonify(db_data)
+        else:
+            return jsonify({'success': False, 'message': 'Failed to get database info'}), 500
+    
+    elif request.method == 'POST':
+        # Switch database
+        data = request.get_json()
+        db_data, success = make_api_request('database-switch', method='POST', data=data)
+        if success:
+            return jsonify(db_data)
+        else:
+            return jsonify(db_data), 500
 
 if __name__ == '__main__':
     app.run(debug=True, port=5000) 
