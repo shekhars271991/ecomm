@@ -781,24 +781,44 @@ if __name__ == '__main__':
                     end_time = time.time()
                     
                     db_tracker.log_query('UPDATE', f"UPDATE categories SET icon = '{icon}' WHERE name = '{name}'", start_time, end_time, 1)
-            
-            # Add sample products
-            products = [
-                Product(name='Fresh Apples', description='Red delicious apples', price=2.99, stock=50, category_id=1, image_url='https://images.unsplash.com/photo-1560806887-1e4cd0b6cbd6?w=300'),
-                Product(name='Bananas', description='Fresh yellow bananas', price=1.49, stock=100, category_id=1, image_url='https://images.unsplash.com/photo-1571771894821-ce9b6c11b08e?w=300'),
-                Product(name='Organic Milk', description='Fresh organic milk', price=3.49, stock=30, category_id=2, image_url='https://images.unsplash.com/photo-1563636619-e9143da7973b?w=300'),
-                Product(name='Free Range Eggs', description='Dozen free range eggs', price=4.99, stock=25, category_id=2, image_url='https://images.unsplash.com/photo-1518569656558-1f25e69d93d7?w=300'),
-                Product(name='Chicken Breast', description='Fresh chicken breast', price=8.99, stock=20, category_id=3, image_url='https://images.unsplash.com/photo-1604503468506-a8da13d82791?w=300'),
-                Product(name='Salmon Fillet', description='Fresh salmon fillet', price=12.99, stock=15, category_id=3, image_url='https://images.unsplash.com/photo-1519708227418-c8c6c49d4ded?w=300'),
-                Product(name='Whole Wheat Bread', description='Fresh whole wheat bread', price=2.49, stock=40, category_id=4, image_url='https://images.unsplash.com/photo-1509440159596-0249088772ff?w=300'),
-                Product(name='Croissants', description='Buttery croissants', price=5.99, stock=20, category_id=4, image_url='https://images.unsplash.com/photo-1551024506-0bccd828d307?w=300'),
-                Product(name='Orange Juice', description='Fresh orange juice', price=3.99, stock=35, category_id=5, image_url='https://images.unsplash.com/photo-1621506289937-a8e4df240d0b?w=300'),
-                Product(name='Potato Chips', description='Crispy potato chips', price=2.99, stock=60, category_id=6, image_url='https://images.unsplash.com/photo-1566478989037-eec170784d0b?w=300')
-            ]
-            
-            for product in products:
+        
+        # Add sample products if not exists or update existing ones
+        products_data = [
+            ('Fresh Apples', 'Red delicious apples', 2.99, 50, 1, 'https://images.unsplash.com/photo-1568702846914-96b305d2aaeb?w=300&h=200&fit=crop&crop=center'),
+            ('Bananas', 'Fresh yellow bananas', 1.49, 100, 1, 'https://images.unsplash.com/photo-1603833665858-e61d17a86224?w=300&h=200&fit=crop&crop=center'),
+            ('Organic Milk', 'Fresh organic milk', 3.49, 30, 2, 'https://images.unsplash.com/photo-1550583724-b2692b85b150?w=300&h=200&fit=crop&crop=center'),
+            ('Free Range Eggs', 'Dozen free range eggs', 4.99, 25, 2, 'https://images.unsplash.com/photo-1582722872445-44dc5f7e3c8f?w=300&h=200&fit=crop&crop=center'),
+            ('Chicken Breast', 'Fresh chicken breast', 8.99, 20, 3, 'https://images.unsplash.com/photo-1588164505205-f8b37b6d8d9e?w=300&h=200&fit=crop&crop=center'),
+            ('Salmon Fillet', 'Fresh salmon fillet', 12.99, 15, 3, 'https://images.unsplash.com/photo-1599084993091-1cb5c0721cc6?w=300&h=200&fit=crop&crop=center'),
+            ('Whole Wheat Bread', 'Fresh whole wheat bread', 2.49, 40, 4, 'https://images.unsplash.com/photo-1585478259715-876acc5be8eb?w=300&h=200&fit=crop&crop=center'),
+            ('Croissants', 'Buttery croissants', 5.99, 20, 4, 'https://images.unsplash.com/photo-1555507036-ab794f1d6ec7?w=300&h=200&fit=crop&crop=center'),
+            ('Orange Juice', 'Fresh orange juice', 3.99, 35, 5, 'https://images.unsplash.com/photo-1600271886742-f049cd451bba?w=300&h=200&fit=crop&crop=center'),
+            ('Potato Chips', 'Crispy potato chips', 2.99, 60, 6, 'https://images.unsplash.com/photo-1621447504864-d8686e12698c?w=300&h=200&fit=crop&crop=center')
+        ]
+        
+        if Product.query.count() == 0:
+            # Create new products
+            for name, description, price, stock, category_id, image_url in products_data:
+                product = Product(name=name, description=description, price=price, stock=stock, category_id=category_id, image_url=image_url)
                 db.session.add(product)
             db.session.commit()
+        else:
+            # Update existing products with better image URLs
+            for name, description, price, stock, category_id, image_url in products_data:
+                start_time = time.time()
+                product = Product.query.filter_by(name=name).first()
+                end_time = time.time()
+                
+                db_tracker.log_query('SELECT', f"SELECT * FROM products WHERE name = '{name}'", start_time, end_time, 1 if product else 0)
+                
+                if product and product.image_url != image_url:
+                    product.image_url = image_url
+                    
+                    start_time = time.time()
+                    db.session.commit()
+                    end_time = time.time()
+                    
+                    db_tracker.log_query('UPDATE', f"UPDATE products SET image_url = '{image_url}' WHERE name = '{name}'", start_time, end_time, 1)
             
             print("Database initialized with sample data!")
     

@@ -154,6 +154,7 @@ body {
     font-size: 14px;
     text-align: center;
     position: relative;
+    transition: opacity 0.3s ease;
 }
 
 .product-image::before {
@@ -167,8 +168,8 @@ body {
     z-index: 1;
 }
 
-.product-image:after {
-    content: '📦';
+.product-image::after {
+    content: '🍎';
     position: absolute;
     top: 50%;
     left: 50%;
@@ -179,14 +180,21 @@ body {
     transition: opacity 0.3s ease;
 }
 
-.product-image[src=""], .product-image[src*="placeholder"] {
+/* Handle broken or missing images */
+.product-image[src=""]::after, 
+.product-image[src*="placeholder"]::after {
+    opacity: 1;
+}
+
+/* Use JavaScript to detect broken images */
+.product-image.broken {
     background-image: linear-gradient(45deg, #e9ecef 25%, transparent 25%), 
                       linear-gradient(-45deg, #e9ecef 25%, transparent 25%), 
                       linear-gradient(45deg, transparent 75%, #e9ecef 75%), 
                       linear-gradient(-45deg, transparent 75%, #e9ecef 75%);
 }
 
-.product-image[src=""]:after, .product-image[src*="placeholder"]:after {
+.product-image.broken::after {
     opacity: 1;
 }
 
