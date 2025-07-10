@@ -25,7 +25,7 @@ cleanup() {
     
     # Kill any remaining python processes related to our apps
     pkill -f "python.*backend/app.py" 2>/dev/null
-    pkill -f "python.*frontend_app.py" 2>/dev/null
+    pkill -f "python.*frontend/frontend_app.py" 2>/dev/null
     
     echo -e "${GREEN}Applications stopped successfully!${NC}"
     exit 0
@@ -88,7 +88,7 @@ else
 fi
 
 echo -e "${BLUE}🌐 Starting frontend application...${NC}"
-python frontend_app.py > frontend.log 2>&1 &
+cd frontend && python frontend_app.py > ../frontend.log 2>&1 &
 FRONTEND_PID=$!
 
 # Wait for frontend to start

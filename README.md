@@ -88,6 +88,7 @@ python app.py
 ### 3. Start Frontend
 ```bash
 pip install requests
+cd frontend
 python frontend_app.py
 ```
 
@@ -164,9 +165,10 @@ rampup/
 │   ├── app.py              # Backend API server
 │   ├── database_manager.py # Database abstraction layer
 │   └── requirements.txt    # Backend dependencies
-├── frontend_app.py         # Frontend application
-├── templates/              # HTML templates
-├── static/                 # CSS, JS, images
+├── frontend/
+│   ├── frontend_app.py     # Frontend application
+│   ├── templates/          # HTML templates
+│   └── static/             # CSS, JS, images
 ├── docker-compose.yml      # MySQL + Aerospike containers
 ├── aerospike.conf          # Aerospike configuration
 ├── init.sql               # MySQL database initialization
@@ -193,9 +195,9 @@ rampup/
 
 1. **Backend**: Add new API endpoints in `backend/app.py`
 2. **Database**: Update both MySQL and Aerospike methods in `database_manager.py`
-3. **Frontend**: Add new routes in `frontend_app.py`
+3. **Frontend**: Add new routes in `frontend/frontend_app.py`
 4. **Templates**: Add/modify HTML templates
-5. **Styling**: Update `static/css/style.css`
+5. **Styling**: Update `frontend/static/css/style.css`
 
 ## 🐛 Troubleshooting
 

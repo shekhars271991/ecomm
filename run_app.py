@@ -55,7 +55,7 @@ def cleanup_processes():
     # Kill any remaining processes
     try:
         subprocess.run(["pkill", "-f", "python.*backend/app.py"], stderr=subprocess.DEVNULL)
-        subprocess.run(["pkill", "-f", "python.*frontend_app.py"], stderr=subprocess.DEVNULL)
+        subprocess.run(["pkill", "-f", "python.*frontend/frontend_app.py"], stderr=subprocess.DEVNULL)
     except:
         pass
     
@@ -186,6 +186,7 @@ def start_frontend():
     with open(frontend_log, 'w') as log_file:
         frontend_process = subprocess.Popen(
             [sys.executable, "frontend_app.py"],
+            cwd="frontend",
             stdout=log_file,
             stderr=subprocess.STDOUT,
             text=True
