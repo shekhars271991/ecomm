@@ -59,14 +59,18 @@ class DatabaseManager:
     
     def log_query(self, operation_type: str, query_description: str, start_time: float, end_time: float, result_count: int = 0):
         """Log database operations"""
+        print(f"🔍 DatabaseManager.log_query called: {self.current_db.upper()} {operation_type}")
         if self.db_tracker and self.db_tracker.enabled:
             self.db_tracker.log_query(
                 f"{self.current_db.upper()} {operation_type}",
                 query_description,
                 start_time,
                 end_time,
-                result_count
+                result_count,
+                database_type=self.current_db
             )
+        else:
+            print(f"❌ DB tracker not available or disabled: tracker={self.db_tracker}, enabled={self.db_tracker.enabled if self.db_tracker else 'N/A'}")
     
     # Category operations
     def get_all_categories(self) -> List[Dict]:

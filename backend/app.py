@@ -29,7 +29,7 @@ class DatabaseTracker:
     def __init__(self):
         self.enabled = app.config.get('DEMO_MODE', False)
     
-    def log_query(self, query_type, query, start_time, end_time, result_count=None):
+    def log_query(self, query_type, query, start_time, end_time, result_count=None, database_type='mysql'):
         if not self.enabled:
             return
         
@@ -38,20 +38,35 @@ class DatabaseTracker:
         # Format the operation string
         operation = f"{query_type}: {str(query)}"
         
+        # Debug output
+        print(f"📊 Logging {database_type} query: {operation[:100]}...")
+        
         # Create and save the log entry
         log_entry = DbLog(
             operation=operation,
+            database_type=database_type,
             response_count=result_count or 0,
             time_taken_ms=round(duration, 2)
         )
         
         try:
+            # Ensure we have an active Flask app context
+            from flask import has_app_context
+            if not has_app_context():
+                print("❌ No Flask app context for logging")
+                return
+                
             db.session.add(log_entry)
             db.session.commit()
+            print(f"✅ Successfully logged {database_type} query")
         except Exception as e:
             # If we can't log to db, just continue - don't break the app
             db.session.rollback()
-            print(f"Failed to log query: {e}")
+            print(f"❌ Failed to log {database_type} query: {e}")
+            # Also print more details for debugging
+            print(f"   Query: {operation}")
+            print(f"   Database type: {database_type}")
+            print(f"   Error type: {type(e).__name__}")
     
     def get_recent_queries(self):
         # Get last 10 queries from database, most recent first
@@ -94,7 +109,7 @@ def track_db_operation(operation_type, operation_func, *args, **kwargs):
     elif isinstance(result, list):
         result_count = len(result)
     
-    db_tracker.log_query(operation_type, query_info, start_time, end_time, result_count)
+    db_tracker.log_query(operation_type, query_info, start_time, end_time, result_count, database_type='mysql')
     return result
 
 # Helper function to create API response with debug info
@@ -234,6 +249,7 @@ class DbLog(db.Model):
     __tablename__ = 'db_logs'
     id = db.Column(db.Integer, primary_key=True)
     operation = db.Column(db.String(500), nullable=False)
+    database_type = db.Column(db.String(50), nullable=False, default='mysql')  # Track which database was used
     response_count = db.Column(db.Integer, default=0)
     time_taken_ms = db.Column(db.Float, nullable=False)
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
@@ -242,6 +258,7 @@ class DbLog(db.Model):
         return {
             'id': self.id,
             'operation': self.operation,
+            'database_type': self.database_type,
             'response_count': self.response_count,
             'time_taken_ms': self.time_taken_ms,
             'timestamp': self.timestamp.strftime('%H:%M:%S')
@@ -290,7 +307,7 @@ class UserResource(Resource):
         existing_user = User.query.filter_by(email=data['email']).first()
         end_time = time.time()
         
-        db_tracker.log_query('SELECT', f"SELECT * FROM users WHERE email = '{data['email']}'", start_time, end_time, 1 if existing_user else 0)
+        db_tracker.log_query('SELECT', f"SELECT * FROM users WHERE email = '{data['email']}'", start_time, end_time, 1 if existing_user else 0, database_type='mysql')
         
         if existing_user:
             # Login attempt
@@ -323,7 +340,7 @@ class UserResource(Resource):
             db.session.commit()
             end_time = time.time()
             
-            db_tracker.log_query('INSERT', f"INSERT INTO users (email, name, ...) VALUES ('{data['email']}', '{data['name']}', ...)", start_time, end_time, 1)
+            db_tracker.log_query('INSERT', f"INSERT INTO users (email, name, ...) VALUES ('{data['email']}', '{data['name']}', ...)", start_time, end_time, 1, database_type='mysql')
             
             user_data = {
                 'id': new_user.id,
@@ -431,7 +448,7 @@ class CartItemResource(Resource):
         cart_item = Cart.query.get(item_id)
         end_time = time.time()
         
-        db_tracker.log_query('SELECT', f"SELECT * FROM cart WHERE id = {item_id}", start_time, end_time, 1 if cart_item else 0)
+        db_tracker.log_query('SELECT', f"SELECT * FROM cart WHERE id = {item_id}", start_time, end_time, 1 if cart_item else 0, database_type='mysql')
         
         if not cart_item:
             return create_api_response(None, False, "Cart item not found"), 404
@@ -443,7 +460,7 @@ class CartItemResource(Resource):
         db.session.commit()
         end_time = time.time()
         
-        db_tracker.log_query('DELETE', f"DELETE FROM cart WHERE id = {item_id}", start_time, end_time, 1)
+        db_tracker.log_query('DELETE', f"DELETE FROM cart WHERE id = {item_id}", start_time, end_time, 1, database_type='mysql')
         
         return create_api_response({
             'message': f'{product_name} removed from cart'
@@ -465,7 +482,7 @@ class CartItemResource(Resource):
         cart_item = Cart.query.get(item_id)
         end_time = time.time()
         
-        db_tracker.log_query('SELECT', f"SELECT * FROM cart WHERE id = {item_id}", start_time, end_time, 1 if cart_item else 0)
+        db_tracker.log_query('SELECT', f"SELECT * FROM cart WHERE id = {item_id}", start_time, end_time, 1 if cart_item else 0, database_type='mysql')
         
         if not cart_item:
             return create_api_response(None, False, "Cart item not found"), 404
@@ -477,7 +494,7 @@ class CartItemResource(Resource):
         db.session.commit()
         end_time = time.time()
         
-        db_tracker.log_query('UPDATE', f"UPDATE cart SET quantity = {quantity} WHERE id = {item_id}", start_time, end_time, 1)
+        db_tracker.log_query('UPDATE', f"UPDATE cart SET quantity = {quantity} WHERE id = {item_id}", start_time, end_time, 1, database_type='mysql')
         
         return create_api_response({
             'message': 'Cart updated',
@@ -498,7 +515,7 @@ class OrdersResource(Resource):
             product = Product.query.get(item['product_id'])
             end_time = time.time()
             
-            db_tracker.log_query('SELECT', f"SELECT * FROM products WHERE id = {item['product_id']}", start_time, end_time, 1 if product else 0)
+            db_tracker.log_query('SELECT', f"SELECT * FROM products WHERE id = {item['product_id']}", start_time, end_time, 1 if product else 0, database_type='mysql')
             
             if product:
                 total_amount += float(product.price) * item['quantity']
@@ -515,7 +532,7 @@ class OrdersResource(Resource):
         db.session.commit()
         end_time = time.time()
         
-        db_tracker.log_query('INSERT', f"INSERT INTO orders (user_id, total_amount, ...) VALUES ({data['user_id']}, {total_amount}, ...)", start_time, end_time, 1)
+        db_tracker.log_query('INSERT', f"INSERT INTO orders (user_id, total_amount, ...) VALUES ({data['user_id']}, {total_amount}, ...)", start_time, end_time, 1, database_type='mysql')
         
         # Add order items
         for item in data['items']:
@@ -536,7 +553,7 @@ class OrdersResource(Resource):
         db.session.commit()
         end_time = time.time()
         
-        db_tracker.log_query('INSERT', 'INSERT INTO order_items (order_id, product_id, quantity, price) VALUES (...)', start_time, end_time, len(data['items']))
+        db_tracker.log_query('INSERT', 'INSERT INTO order_items (order_id, product_id, quantity, price) VALUES (...)', start_time, end_time, len(data['items']), database_type='mysql')
         
         order_data = {
             'id': new_order.id,
@@ -558,7 +575,7 @@ class OrdersResource(Resource):
         orders = Order.query.filter_by(user_id=user_id).all()
         end_time = time.time()
         
-        db_tracker.log_query('SELECT', f'SELECT * FROM orders WHERE user_id = {user_id}', start_time, end_time, len(orders))
+        db_tracker.log_query('SELECT', f'SELECT * FROM orders WHERE user_id = {user_id}', start_time, end_time, len(orders), database_type='mysql')
         
         orders_data = []
         for order in orders:
@@ -596,22 +613,50 @@ class DebugResource(Resource):
 class DbLogsResource(Resource):
     def get(self):
         try:
-            # Get all db logs, most recent first
-            logs = DbLog.query.order_by(DbLog.timestamp.desc()).all()
+            # Get database type filter from query parameters
+            database_type = request.args.get('database_type')
+            
+            # Start with base query
+            query = DbLog.query
+            
+            # Apply database type filter if provided
+            if database_type and database_type in ['mysql', 'aerospike']:
+                query = query.filter_by(database_type=database_type)
+            
+            # Get logs ordered by timestamp desc
+            logs = query.order_by(DbLog.timestamp.desc()).all()
             logs_data = [log.to_dict() for log in logs]
             
             return create_api_response({
                 'logs': logs_data,
-                'count': len(logs_data)
+                'count': len(logs_data),
+                'database_type_filter': database_type
             })
         except Exception as e:
             return create_api_response(None, False, f"Failed to get logs: {str(e)}"), 500
     
     def delete(self):
         try:
-            DbLog.query.delete()
+            # Get database type filter from query parameters
+            database_type = request.args.get('database_type')
+            
+            # Start with base query
+            query = DbLog.query
+            
+            # Apply database type filter if provided
+            if database_type and database_type in ['mysql', 'aerospike']:
+                query = query.filter_by(database_type=database_type)
+            
+            # Delete filtered logs
+            deleted_count = query.delete()
             db.session.commit()
-            return create_api_response(None, True, "All logs cleared")
+            
+            filter_msg = f" for {database_type} database" if database_type else ""
+            return create_api_response(
+                {'deleted_count': deleted_count}, 
+                True, 
+                f"Logs cleared{filter_msg}"
+            )
         except Exception as e:
             db.session.rollback()
             return create_api_response(None, False, f"Failed to clear logs: {str(e)}"), 500
@@ -675,6 +720,20 @@ if __name__ == '__main__':
     with app.app_context():
         db.create_all()
         
+        # Add database_type column to db_logs table if it doesn't exist
+        try:
+            # Check if column exists by trying to query it
+            db.session.execute(db.text("SELECT database_type FROM db_logs LIMIT 1"))
+        except Exception:
+            # Column doesn't exist, add it
+            try:
+                db.session.execute(db.text("ALTER TABLE db_logs ADD COLUMN database_type VARCHAR(50) NOT NULL DEFAULT 'mysql'"))
+                db.session.commit()
+                print("Added database_type column to db_logs table")
+            except Exception as e:
+                db.session.rollback()
+                print(f"Failed to add database_type column: {e}")
+        
         # Initialize database manager
         models = {
             'Category': Category,
@@ -695,7 +754,7 @@ if __name__ == '__main__':
         end_time = time.time()
         
         if item_count > 0:
-            db_tracker.log_query('DELETE', f"DELETE FROM cart (cleared {item_count} items on startup)", start_time, end_time, item_count)
+            db_tracker.log_query('DELETE', f"DELETE FROM cart (cleared {item_count} items on startup)", start_time, end_time, item_count, database_type='mysql')
         
         # Add sample data if not exists or update existing categories with proper icons
         categories_data = [
@@ -720,7 +779,7 @@ if __name__ == '__main__':
                 category = Category.query.filter_by(name=name).first()
                 end_time = time.time()
                 
-                db_tracker.log_query('SELECT', f"SELECT * FROM categories WHERE name = '{name}'", start_time, end_time, 1 if category else 0)
+                db_tracker.log_query('SELECT', f"SELECT * FROM categories WHERE name = '{name}'", start_time, end_time, 1 if category else 0, database_type='mysql')
                 
                 if category and category.icon != icon:
                     category.icon = icon
@@ -729,7 +788,7 @@ if __name__ == '__main__':
                     db.session.commit()
                     end_time = time.time()
                     
-                    db_tracker.log_query('UPDATE', f"UPDATE categories SET icon = '{icon}' WHERE name = '{name}'", start_time, end_time, 1)
+                    db_tracker.log_query('UPDATE', f"UPDATE categories SET icon = '{icon}' WHERE name = '{name}'", start_time, end_time, 1, database_type='mysql')
         
         # Add sample products if not exists or update existing ones
         products_data = [
@@ -758,7 +817,7 @@ if __name__ == '__main__':
                 product = Product.query.filter_by(name=name).first()
                 end_time = time.time()
                 
-                db_tracker.log_query('SELECT', f"SELECT * FROM products WHERE name = '{name}'", start_time, end_time, 1 if product else 0)
+                db_tracker.log_query('SELECT', f"SELECT * FROM products WHERE name = '{name}'", start_time, end_time, 1 if product else 0, database_type='mysql')
                 
                 if product and product.image_url != image_url:
                     product.image_url = image_url
@@ -767,7 +826,7 @@ if __name__ == '__main__':
                     db.session.commit()
                     end_time = time.time()
                     
-                    db_tracker.log_query('UPDATE', f"UPDATE products SET image_url = '{image_url}' WHERE name = '{name}'", start_time, end_time, 1)
+                    db_tracker.log_query('UPDATE', f"UPDATE products SET image_url = '{image_url}' WHERE name = '{name}'", start_time, end_time, 1, database_type='mysql')
             
             print("Database initialized with sample data!")
     

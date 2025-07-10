@@ -6,8 +6,10 @@ class DatabaseDemo {
     constructor() {
         this.isVisible = false;
         this.queries = [];
+        this.currentFilter = 'all'; // 'all', 'mysql', 'aerospike'
         this.storageKey = 'app_database_queries';
         this.visibilityKey = 'databaseDemo_visible';
+        this.filterKey = 'databaseDemo_filter';
         this.apiUrl = 'http://localhost:5001/api/db-logs';
         this.init();
     }
@@ -24,6 +26,7 @@ class DatabaseDemo {
         try {
             localStorage.setItem(this.storageKey, JSON.stringify(this.queries));
             localStorage.setItem(this.visibilityKey, this.isVisible.toString());
+            localStorage.setItem(this.filterKey, this.currentFilter);
         } catch (e) {
             console.log('Demo panel: localStorage not available');
         }
@@ -33,6 +36,7 @@ class DatabaseDemo {
         try {
             const savedQueries = localStorage.getItem(this.storageKey);
             const savedVisibility = localStorage.getItem(this.visibilityKey);
+            const savedFilter = localStorage.getItem(this.filterKey);
             
             if (savedQueries) {
                 this.queries = JSON.parse(savedQueries);
@@ -40,6 +44,10 @@ class DatabaseDemo {
             
             if (savedVisibility) {
                 this.isVisible = savedVisibility === 'true';
+            }
+            
+            if (savedFilter) {
+                this.currentFilter = savedFilter;
             }
         } catch (e) {
             console.log('Demo panel: Could not load from localStorage');
@@ -61,12 +69,14 @@ class DatabaseDemo {
                 }
                 this.renderQueries();
                 this.updateStats();
+                this.updateFilterUI();
             }, 100);
         } else {
             // Even if not visible, render queries in case user opens panel
             setTimeout(() => {
                 this.renderQueries();
                 this.updateStats();
+                this.updateFilterUI();
             }, 100);
         }
     }
@@ -78,8 +88,15 @@ class DatabaseDemo {
         demoPanel.className = 'demo-panel';
         demoPanel.innerHTML = `
             <div class="demo-header">
-                <h5><i class="fas fa-database"></i> Database Operations Log</h5>
+                <h5><i class="fas fa-database"></i> DB Log</h5>
                 <div class="demo-controls">
+                    <div class="demo-filter-container">
+                        <select id="demo-db-filter" class="demo-filter-select" onchange="databaseDemo.setFilter(this.value)">
+                            <option value="all">All Databases</option>
+                            <option value="mysql">MySQL</option>
+                            <option value="aerospike">Aerospike</option>
+                        </select>
+                    </div>
                     <button class="btn btn-sm btn-outline-light" onclick="databaseDemo.refreshQueries()">
                         <i class="fas fa-sync-alt"></i> Refresh
                     </button>
@@ -101,13 +118,17 @@ class DatabaseDemo {
                         <i class="fas fa-stopwatch"></i> 
                         <span id="demo-avg-time">0</span>ms avg
                     </span>
+                    <span class="stat-item">
+                        <i class="fas fa-filter"></i> 
+                        <span id="demo-filter-status">All</span>
+                    </span>
                 </div>
                 <div class="demo-queries" id="demo-queries">
                     <div class="no-queries">
                         <i class="fas fa-info-circle"></i>
                         Interact with the app to see database queries
                         <br><br>
-                        <small>💡 Shows actual SQL queries with execution times - persists across page reloads</small>
+                        <small>💡 Shows actual queries with execution times - use filter to see specific database operations</small>
                     </div>
                 </div>
             </div>
@@ -147,10 +168,31 @@ class DatabaseDemo {
         this.saveToStorage();
     }
 
+    setFilter(filterType) {
+        this.currentFilter = filterType;
+        
+        // Update filter dropdown
+        const filterSelect = document.getElementById('demo-db-filter');
+        if (filterSelect) {
+            filterSelect.value = filterType;
+        }
+        
+        // Update filter status
+        const statusText = filterType === 'all' ? 'All' : filterType.toUpperCase();
+        const filterStatus = document.getElementById('demo-filter-status');
+        if (filterStatus) {
+            filterStatus.textContent = statusText;
+        }
+        
+        // Save to storage and refresh
+        this.saveToStorage();
+        this.refreshQueries();
+    }
+
     async refreshQueries() {
         try {
             // Show loading state
-            const refreshBtn = document.querySelector('.demo-controls .btn:first-child');
+            const refreshBtn = document.querySelector('.demo-controls .btn:nth-child(2)');
             if (refreshBtn) {
                 const originalHTML = refreshBtn.innerHTML;
                 refreshBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Loading...';
@@ -163,13 +205,20 @@ class DatabaseDemo {
                 }, 1000);
             }
 
-            const response = await fetch(this.apiUrl);
+            // Build API URL with filter
+            let apiUrl = this.apiUrl;
+            if (this.currentFilter !== 'all') {
+                apiUrl += `?database_type=${this.currentFilter}`;
+            }
+
+            const response = await fetch(apiUrl);
             const data = await response.json();
             
             if (data.success && data.data) {
                 this.queries = data.data.logs || [];
                 this.renderQueries();
                 this.updateStats();
+                this.updateFilterUI();
                 this.saveToStorage();
             } else {
                 console.error('Failed to fetch logs:', data.message);
@@ -181,7 +230,13 @@ class DatabaseDemo {
 
     async clearQueries() {
         try {
-            const response = await fetch(this.apiUrl, {
+            // Build API URL with filter
+            let apiUrl = this.apiUrl;
+            if (this.currentFilter !== 'all') {
+                apiUrl += `?database_type=${this.currentFilter}`;
+            }
+
+            const response = await fetch(apiUrl, {
                 method: 'DELETE'
             });
             const data = await response.json();
@@ -190,6 +245,7 @@ class DatabaseDemo {
                 this.queries = [];
                 this.renderQueries();
                 this.updateStats();
+                this.updateFilterUI();
                 this.saveToStorage();
             } else {
                 console.error('Failed to clear logs:', data.message);
@@ -199,16 +255,32 @@ class DatabaseDemo {
         }
     }
 
+    updateFilterUI() {
+        // Update filter dropdown
+        const filterSelect = document.getElementById('demo-db-filter');
+        if (filterSelect) {
+            filterSelect.value = this.currentFilter;
+        }
+        
+        // Update filter status
+        const statusText = this.currentFilter === 'all' ? 'All' : this.currentFilter.toUpperCase();
+        const filterStatus = document.getElementById('demo-filter-status');
+        if (filterStatus) {
+            filterStatus.textContent = statusText;
+        }
+    }
+
     renderQueries() {
         const container = document.getElementById('demo-queries');
         
         if (this.queries.length === 0) {
+            const filterText = this.currentFilter === 'all' ? '' : ` for ${this.currentFilter.toUpperCase()}`;
             container.innerHTML = `
                 <div class="no-queries">
                     <i class="fas fa-info-circle"></i>
-                    Interact with the app to see database queries
+                    No queries found${filterText}
                     <br><br>
-                    <small>💡 Shows actual SQL queries with execution times - persists across page reloads</small>
+                    <small>💡 Try switching database type or clearing filters to see more queries</small>
                 </div>
             `;
             return;
@@ -220,10 +292,15 @@ class DatabaseDemo {
             const queryType = operationParts[0];
             const queryText = operationParts.slice(1).join(':').trim();
             
+            // Get database type for styling
+            const dbType = query.database_type || 'mysql';
+            const dbTypeClass = dbType.toLowerCase();
+            
             return `
                 <div class="query-item">
                     <div class="query-header">
                         <span class="query-type ${queryType.toLowerCase()}">${queryType}</span>
+                        <span class="query-db-type ${dbTypeClass}">${dbType.toUpperCase()}</span>
                         <span class="query-time">${query.timestamp}</span>
                         <span class="query-duration">${query.time_taken_ms}ms</span>
                     </div>

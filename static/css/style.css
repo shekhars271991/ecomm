@@ -685,6 +685,100 @@ body.demo-panel-open .demo-toggle {
     font-weight: 600;
 }
 
+/* Filter dropdown styles */
+.demo-filter-container {
+    margin-right: 10px;
+}
+
+.demo-filter-select {
+    background: rgba(255,255,255,0.1);
+    border: 1px solid rgba(255,255,255,0.3);
+    border-radius: 4px;
+    color: white;
+    padding: 5px 10px;
+    font-size: 12px;
+    min-width: 120px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.demo-filter-select:hover {
+    background: rgba(255,255,255,0.2);
+}
+
+.demo-filter-select:focus {
+    outline: none;
+    border-color: rgba(255,255,255,0.5);
+    box-shadow: 0 0 0 2px rgba(255,255,255,0.1);
+}
+
+.demo-filter-select option {
+    background: #2c3e50;
+    color: white;
+    padding: 5px;
+}
+
+/* Database type badge styles */
+.query-db-type {
+    padding: 2px 6px;
+    border-radius: 10px;
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-left: 5px;
+}
+
+.query-db-type.mysql {
+    background: #3498db;
+    color: white;
+}
+
+.query-db-type.aerospike {
+    background: #e74c3c;
+    color: white;
+}
+
+/* Enhanced query item layout */
+.query-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+    flex-wrap: wrap;
+    gap: 5px;
+}
+
+.query-header .query-type {
+    order: 1;
+}
+
+.query-header .query-db-type {
+    order: 2;
+}
+
+.query-header .query-time {
+    order: 3;
+}
+
+.query-header .query-duration {
+    order: 4;
+}
+
+/* Stats section enhancements */
+.stat-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    white-space: nowrap;
+}
+
+.stat-item i {
+    color: #3498db;
+    min-width: 14px;
+}
+
 /* Mobile responsiveness for demo panel */
 @media (max-width: 768px) {
     .demo-panel {
@@ -725,8 +819,31 @@ body.demo-panel-open .demo-toggle {
         gap: 10px;
     }
     
+    /* Filter-specific mobile styles */
+    .demo-filter-container {
+        margin-right: 0;
+        margin-bottom: 10px;
+    }
+    
+    .demo-filter-select {
+        width: 100%;
+        min-width: auto;
+    }
+    
+    .demo-controls {
+        flex-direction: column;
+        gap: 5px;
+    }
+    
     .query-header {
         flex-direction: column;
         align-items: flex-start;
+        gap: 5px;
+    }
+    
+    .query-header .query-type,
+    .query-header .query-db-type {
+        display: inline-block;
+        margin-right: 10px;
     }
 } 
