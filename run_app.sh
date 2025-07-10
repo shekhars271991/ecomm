@@ -71,19 +71,32 @@ fi
 
 echo -e "${BLUE}🔧 Starting backend API server...${NC}"
 cd backend
-python app.py > ../backend.log 2>&1 &
+PYTHONPATH=. python app.py > ../backend.log 2>&1 &
 BACKEND_PID=$!
 cd ..
 
 # Wait for backend to start
-echo -e "${YELLOW}⏳ Waiting for backend to start...${NC}"
-sleep 3
+echo -e "${YELLOW}⏳ Waiting for backend to start (loading 1740 products)...${NC}"
+sleep 5
 
-# Check if backend is responding
-if curl -s http://localhost:5001/api/categories > /dev/null 2>&1; then
-    echo -e "${GREEN}✅ Backend API started successfully on http://localhost:5001${NC}"
-else
-    echo -e "${RED}❌ Backend failed to start. Check backend.log for details.${NC}"
+# Check if backend is responding with retries
+MAX_RETRIES=6
+RETRY_COUNT=0
+while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
+    if curl -s http://localhost:5001/api/categories > /dev/null 2>&1; then
+        echo -e "${GREEN}✅ Backend API started successfully on http://localhost:5001${NC}"
+        break
+    else
+        RETRY_COUNT=$((RETRY_COUNT + 1))
+        if [ $RETRY_COUNT -lt $MAX_RETRIES ]; then
+            echo -e "${YELLOW}⏳ Backend still loading... (attempt $RETRY_COUNT/$MAX_RETRIES)${NC}"
+            sleep 5
+        fi
+    fi
+done
+
+if [ $RETRY_COUNT -eq $MAX_RETRIES ]; then
+    echo -e "${RED}❌ Backend failed to start after $MAX_RETRIES attempts. Check backend.log for details.${NC}"
     exit 1
 fi
 

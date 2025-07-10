@@ -51,24 +51,40 @@ CREATE TABLE IF NOT EXISTS order_items (
     FOREIGN KEY (product_id) REFERENCES products(id)
 );
 
--- Insert sample categories
-INSERT INTO categories (name, icon) VALUES
-('Fruits & Vegetables', '🥕'),
-('Dairy & Eggs', '🥛'),
-('Meat & Seafood', '🥩'),
-('Bakery', '🍞'),
-('Beverages', '🥤'),
-('Snacks', '🍿');
+CREATE TABLE IF NOT EXISTS cart (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_session VARCHAR(255) NOT NULL,
+    product_id INT NOT NULL,
+    quantity INT NOT NULL DEFAULT 1,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (product_id) REFERENCES products(id)
+);
 
--- Insert sample products
-INSERT INTO products (name, description, price, category_id, stock, image_url) VALUES
-('Fresh Bananas', 'Ripe yellow bananas', 2.99, 1, 50, 'https://images.unsplash.com/photo-1571771894821-ce9b6c11b08e?w=300&h=200&fit=crop'),
-('Organic Apples', 'Crisp red apples', 3.49, 1, 30, 'https://images.unsplash.com/photo-1560806887-1e4cd0b6cbd6?w=300&h=200&fit=crop'),
-('Whole Milk', 'Fresh whole milk 1L', 3.29, 2, 20, 'https://images.unsplash.com/photo-1563636619-e9143da7973b?w=300&h=200&fit=crop'),
-('Free Range Eggs', 'Dozen organic eggs', 4.99, 2, 15, 'https://images.unsplash.com/photo-1518569656558-1f25e69d93d7?w=300&h=200&fit=crop'),
-('Salmon Fillet', 'Fresh Atlantic salmon', 12.99, 3, 10, 'https://images.unsplash.com/photo-1544943910-4c1dc44aab44?w=300&h=200&fit=crop'),
-('Chicken Breast', 'Boneless chicken breast', 8.99, 3, 25, 'https://images.unsplash.com/photo-1604503468506-a8da13d82791?w=300&h=200&fit=crop'),
-('Sourdough Bread', 'Artisan sourdough loaf', 4.49, 4, 12, 'https://images.unsplash.com/photo-1509440159596-0249088772ff?w=300&h=200&fit=crop'),
-('Orange Juice', 'Fresh squeezed orange juice', 4.99, 5, 18, 'https://images.unsplash.com/photo-1621506289937-a8e4df240d0b?w=300&h=200&fit=crop'),
-('Potato Chips', 'Crispy potato chips', 2.49, 6, 40, 'https://images.unsplash.com/photo-1566478989037-eec170784d0b?w=300&h=200&fit=crop'),
-('Greek Yogurt', 'Creamy Greek yogurt', 1.99, 2, 35, 'https://images.unsplash.com/photo-1571212515416-8fc82f26c7c2?w=300&h=200&fit=crop'); 
+CREATE TABLE IF NOT EXISTS db_logs (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    operation VARCHAR(500) NOT NULL,
+    database_type VARCHAR(50) NOT NULL DEFAULT 'mysql',
+    response_count INT DEFAULT 0,
+    time_taken_ms FLOAT NOT NULL,
+    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Truncate existing data (in proper order to handle foreign key constraints)
+-- Disable foreign key checks temporarily
+SET FOREIGN_KEY_CHECKS = 0;
+
+-- Clear all data from tables (preserving table structure)
+TRUNCATE TABLE order_items;
+TRUNCATE TABLE orders;
+TRUNCATE TABLE cart;
+TRUNCATE TABLE products;
+TRUNCATE TABLE categories;
+TRUNCATE TABLE users;
+TRUNCATE TABLE db_logs;
+
+-- Re-enable foreign key checks
+SET FOREIGN_KEY_CHECKS = 1;
+
+-- All data will be loaded by the CSV data loader
+-- No sample data inserted here 

@@ -1,37 +1,11 @@
-Connected to Aerospike!
-📊 Logging mysql query: SELECT: SELECT * FROM categories WHERE name = 'Fruits & Vegetables'...
-✅ Successfully logged mysql query
-📊 Logging mysql query: SELECT: SELECT * FROM categories WHERE name = 'Dairy & Eggs'...
-✅ Successfully logged mysql query
-📊 Logging mysql query: SELECT: SELECT * FROM categories WHERE name = 'Meat & Seafood'...
-✅ Successfully logged mysql query
-📊 Logging mysql query: SELECT: SELECT * FROM categories WHERE name = 'Bakery'...
-✅ Successfully logged mysql query
-📊 Logging mysql query: SELECT: SELECT * FROM categories WHERE name = 'Beverages'...
-✅ Successfully logged mysql query
-📊 Logging mysql query: SELECT: SELECT * FROM categories WHERE name = 'Snacks'...
-✅ Successfully logged mysql query
-📊 Logging mysql query: SELECT: SELECT * FROM products WHERE name = 'Fresh Apples'...
-✅ Successfully logged mysql query
-📊 Logging mysql query: SELECT: SELECT * FROM products WHERE name = 'Bananas'...
-✅ Successfully logged mysql query
-📊 Logging mysql query: SELECT: SELECT * FROM products WHERE name = 'Organic Milk'...
-✅ Successfully logged mysql query
-📊 Logging mysql query: SELECT: SELECT * FROM products WHERE name = 'Free Range Eggs'...
-✅ Successfully logged mysql query
-📊 Logging mysql query: SELECT: SELECT * FROM products WHERE name = 'Chicken Breast'...
-✅ Successfully logged mysql query
-📊 Logging mysql query: SELECT: SELECT * FROM products WHERE name = 'Salmon Fillet'...
-✅ Successfully logged mysql query
-📊 Logging mysql query: SELECT: SELECT * FROM products WHERE name = 'Whole Wheat Bread'...
-✅ Successfully logged mysql query
-📊 Logging mysql query: SELECT: SELECT * FROM products WHERE name = 'Croissants'...
-✅ Successfully logged mysql query
-📊 Logging mysql query: SELECT: SELECT * FROM products WHERE name = 'Orange Juice'...
-✅ Successfully logged mysql query
-📊 Logging mysql query: SELECT: SELECT * FROM products WHERE name = 'Potato Chips'...
-✅ Successfully logged mysql query
-Database initialized with sample data!
+MySQL Manager initialized successfully
+Aerospike Manager connected successfully!
+🔍 AerospikeManager.log_query called: AEROSPIKE INSERT
+📊 Logging aerospike query: AEROSPIKE INSERT: Initialized 6 categories and 6 products in Aerospike...
+✅ Successfully logged aerospike query
+✅ Initialized Aerospike with 6 categories and 6 products
+Unified Database Manager initialized successfully
+Database already contains 19 categories and 1740 products - skipping CSV load
  * Serving Flask app 'app'
  * Debug mode: on
 [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
@@ -42,21 +16,55 @@ Database initialized with sample data!
  * Restarting with stat
  * Debugger is active!
  * Debugger PIN: 318-484-797
-127.0.0.1 - - [10/Jul/2025 10:42:17] "GET /api/categories HTTP/1.1" 200 -
-127.0.0.1 - - [10/Jul/2025 10:42:20] "GET /api/categories HTTP/1.1" 200 -
-127.0.0.1 - - [10/Jul/2025 10:42:20] "GET /api/products HTTP/1.1" 200 -
-127.0.0.1 - - [10/Jul/2025 10:42:20] "GET /api/cart?session_id=eec4c462-a24b-4f71-87e6-b8a1df515f29 HTTP/1.1" 200 -
-127.0.0.1 - - [10/Jul/2025 10:42:32] "GET /api/categories HTTP/1.1" 200 -
-127.0.0.1 - - [10/Jul/2025 10:42:32] "GET /api/products HTTP/1.1" 200 -
-127.0.0.1 - - [10/Jul/2025 10:42:32] "GET /api/cart?session_id=57f213b7-a075-4e63-95ac-0d4db7d3d8bb HTTP/1.1" 200 -
-127.0.0.1 - - [10/Jul/2025 10:42:32] "GET /api/db-logs?database_type=aerospike HTTP/1.1" 200 -
-127.0.0.1 - - [10/Jul/2025 10:42:32] "GET /api/database-switch HTTP/1.1" 200 -
-127.0.0.1 - - [10/Jul/2025 10:42:33] "OPTIONS /api/db-logs?database_type=aerospike HTTP/1.1" 200 -
-127.0.0.1 - - [10/Jul/2025 10:42:33] "DELETE /api/db-logs?database_type=aerospike HTTP/1.1" 200 -
-127.0.0.1 - - [10/Jul/2025 10:42:36] "POST /api/database-switch HTTP/1.1" 200 -
-127.0.0.1 - - [10/Jul/2025 10:42:37] "GET /api/products?category=2 HTTP/1.1" 200 -
-127.0.0.1 - - [10/Jul/2025 10:42:37] "GET /api/categories HTTP/1.1" 200 -
-127.0.0.1 - - [10/Jul/2025 10:42:37] "GET /api/cart?session_id=57f213b7-a075-4e63-95ac-0d4db7d3d8bb HTTP/1.1" 200 -
-127.0.0.1 - - [10/Jul/2025 10:42:37] "GET /api/database-switch HTTP/1.1" 200 -
-127.0.0.1 - - [10/Jul/2025 10:42:37] "GET /api/db-logs?database_type=aerospike HTTP/1.1" 200 -
-127.0.0.1 - - [10/Jul/2025 10:42:39] "GET /api/db-logs?database_type=aerospike HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2025 12:34:31] "GET /api/categories HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2025 12:34:34] "GET /api/categories HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2025 12:34:35] "GET /api/products HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2025 12:34:35] "GET /api/cart?session_id=4d15951b-10d9-4566-8cb7-b207cc99340d HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2025 12:34:37] "GET /api/categories HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2025 12:34:39] "GET /api/products HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2025 12:34:39] "GET /api/cart?session_id=57f213b7-a075-4e63-95ac-0d4db7d3d8bb HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2025 12:34:39] "GET /api/db-logs HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2025 12:34:39] "GET /api/database-switch HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2025 12:34:42] "GET /api/products HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2025 12:34:42] "GET /api/categories HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2025 12:34:42] "GET /api/cart?session_id=57f213b7-a075-4e63-95ac-0d4db7d3d8bb HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2025 12:34:43] "GET /api/db-logs HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2025 12:34:43] "GET /api/database-switch HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2025 12:34:50] "GET /api/db-logs HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2025 12:34:53] "POST /api/database-switch HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2025 12:34:54] "GET /api/products HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2025 12:34:55] "GET /api/categories HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2025 12:34:55] "GET /api/cart?session_id=57f213b7-a075-4e63-95ac-0d4db7d3d8bb HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2025 12:34:55] "GET /api/db-logs HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2025 12:34:55] "GET /api/database-switch HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2025 12:35:00] "GET /api/products?category=16 HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2025 12:35:00] "GET /api/categories HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2025 12:35:00] "GET /api/cart?session_id=57f213b7-a075-4e63-95ac-0d4db7d3d8bb HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2025 12:35:00] "GET /api/database-switch HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2025 12:35:00] "GET /api/db-logs HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2025 12:35:17] "OPTIONS /api/db-logs HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2025 12:35:17] "DELETE /api/db-logs HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2025 12:35:17] "GET /api/db-logs HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2025 12:35:21] "POST /api/database-switch HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2025 12:35:22] "GET /api/products?category=16 HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2025 12:35:22] "GET /api/categories HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2025 12:35:22] "GET /api/cart?session_id=57f213b7-a075-4e63-95ac-0d4db7d3d8bb HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2025 12:35:22] "GET /api/db-logs HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2025 12:35:22] "GET /api/database-switch HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2025 12:35:23] "GET /api/db-logs HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2025 12:35:31] "POST /api/database-switch HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2025 12:35:32] "GET /api/products?category=16 HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2025 12:35:32] "GET /api/categories HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2025 12:35:32] "GET /api/cart?session_id=57f213b7-a075-4e63-95ac-0d4db7d3d8bb HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2025 12:35:32] "GET /api/db-logs HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2025 12:35:32] "GET /api/database-switch HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2025 12:36:06] "GET /api/categories HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2025 12:36:06] "GET /api/products HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2025 12:36:06] "GET /api/cart?session_id=57f213b7-a075-4e63-95ac-0d4db7d3d8bb HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2025 12:36:06] "GET /api/db-logs HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2025 12:36:06] "GET /api/database-switch HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2025 12:36:08] "GET /api/products?category=10 HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2025 12:36:08] "GET /api/categories HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2025 12:36:08] "GET /api/cart?session_id=57f213b7-a075-4e63-95ac-0d4db7d3d8bb HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2025 12:36:08] "GET /api/db-logs HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2025 12:36:08] "GET /api/database-switch HTTP/1.1" 200 -

@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, session
+from flask import Flask, request, jsonify, session, current_app
 from flask_sqlalchemy import SQLAlchemy
 from flask_restful import Api, Resource
 from flask_cors import CORS
@@ -7,7 +7,7 @@ import os
 import time
 import logging
 from werkzeug.security import generate_password_hash, check_password_hash
-from database_manager import DatabaseManager
+from unified_database_manager import UnifiedDatabaseManager
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'your-secret-key-here'
@@ -22,7 +22,7 @@ api = Api(app)
 CORS(app)
 
 # Initialize database manager
-db_manager = DatabaseManager()
+db_manager = UnifiedDatabaseManager()
 
 # Demo mode: Track database operations
 class DatabaseTracker:
@@ -756,78 +756,29 @@ if __name__ == '__main__':
         if item_count > 0:
             db_tracker.log_query('DELETE', f"DELETE FROM cart (cleared {item_count} items on startup)", start_time, end_time, item_count, database_type='mysql')
         
-        # Add sample data if not exists or update existing categories with proper icons
-        categories_data = [
-            ('Fruits & Vegetables', 'fas fa-carrot'),
-            ('Dairy & Eggs', 'fas fa-glass-whiskey'),
-            ('Meat & Seafood', 'fas fa-drumstick-bite'),
-            ('Bakery', 'fas fa-bread-slice'),
-            ('Beverages', 'fas fa-coffee'),
-            ('Snacks', 'fas fa-cookie-bite')
-        ]
-        
+        # Load data from CSV file if database is empty
         if Category.query.count() == 0:
-            # Create new categories
-            for name, icon in categories_data:
-                category = Category(name=name, icon=icon)
-                db.session.add(category)
-            db.session.commit()
+            print("Database is empty, loading data from CSV file...")
+            try:
+                from csv_data_loader import CSVDataLoader
+                
+                # Get the individual managers from the unified manager
+                mysql_manager = db_manager.mysql_manager
+                aerospike_manager = db_manager.aerospike_manager
+                
+                # Create CSV loader
+                csv_loader = CSVDataLoader(mysql_manager, aerospike_manager)
+                
+                # Load data from CSV (this will truncate existing data first)
+                csv_file_path = os.path.join(os.path.dirname(__file__), 'datasets', 'GroceryDataset.csv')
+                csv_loader.load_all_data(csv_file_path)
+                
+                print("Data loaded successfully from CSV file!")
+                
+            except Exception as e:
+                print(f"Error loading data from CSV: {e}")
+                print("CSV data loading failed - check init.sql ran properly and CSV file exists")
         else:
-            # Update existing categories with proper icons
-            for name, icon in categories_data:
-                start_time = time.time()
-                category = Category.query.filter_by(name=name).first()
-                end_time = time.time()
-                
-                db_tracker.log_query('SELECT', f"SELECT * FROM categories WHERE name = '{name}'", start_time, end_time, 1 if category else 0, database_type='mysql')
-                
-                if category and category.icon != icon:
-                    category.icon = icon
-                    
-                    start_time = time.time()
-                    db.session.commit()
-                    end_time = time.time()
-                    
-                    db_tracker.log_query('UPDATE', f"UPDATE categories SET icon = '{icon}' WHERE name = '{name}'", start_time, end_time, 1, database_type='mysql')
-        
-        # Add sample products if not exists or update existing ones
-        products_data = [
-            ('Fresh Apples', 'Red delicious apples', 2.99, 50, 1, 'https://images.unsplash.com/photo-1568702846914-96b305d2aaeb?w=300&h=200&fit=crop&crop=center'),
-            ('Bananas', 'Fresh yellow bananas', 1.49, 100, 1, 'https://images.unsplash.com/photo-1603833665858-e61d17a86224?w=300&h=200&fit=crop&crop=center'),
-            ('Organic Milk', 'Fresh organic milk', 3.49, 30, 2, 'https://images.unsplash.com/photo-1550583724-b2692b85b150?w=300&h=200&fit=crop&crop=center'),
-            ('Free Range Eggs', 'Dozen free range eggs', 4.99, 25, 2, 'https://images.unsplash.com/photo-1582722872445-44dc5f7e3c8f?w=300&h=200&fit=crop&crop=center'),
-            ('Chicken Breast', 'Fresh chicken breast', 8.99, 20, 3, 'https://images.unsplash.com/photo-1588164505205-f8b37b6d8d9e?w=300&h=200&fit=crop&crop=center'),
-            ('Salmon Fillet', 'Fresh salmon fillet', 12.99, 15, 3, 'https://images.unsplash.com/photo-1599084993091-1cb5c0721cc6?w=300&h=200&fit=crop&crop=center'),
-            ('Whole Wheat Bread', 'Fresh whole wheat bread', 2.49, 40, 4, 'https://images.unsplash.com/photo-1585478259715-876acc5be8eb?w=300&h=200&fit=crop&crop=center'),
-            ('Croissants', 'Buttery croissants', 5.99, 20, 4, 'https://images.unsplash.com/photo-1555507036-ab794f1d6ec7?w=300&h=200&fit=crop&crop=center'),
-            ('Orange Juice', 'Fresh orange juice', 3.99, 35, 5, 'https://images.unsplash.com/photo-1600271886742-f049cd451bba?w=300&h=200&fit=crop&crop=center'),
-            ('Potato Chips', 'Crispy potato chips', 2.99, 60, 6, 'https://images.unsplash.com/photo-1621447504864-d8686e12698c?w=300&h=200&fit=crop&crop=center')
-        ]
-        
-        if Product.query.count() == 0:
-            # Create new products
-            for name, description, price, stock, category_id, image_url in products_data:
-                product = Product(name=name, description=description, price=price, stock=stock, category_id=category_id, image_url=image_url)
-                db.session.add(product)
-            db.session.commit()
-        else:
-            # Update existing products with better image URLs
-            for name, description, price, stock, category_id, image_url in products_data:
-                start_time = time.time()
-                product = Product.query.filter_by(name=name).first()
-                end_time = time.time()
-                
-                db_tracker.log_query('SELECT', f"SELECT * FROM products WHERE name = '{name}'", start_time, end_time, 1 if product else 0, database_type='mysql')
-                
-                if product and product.image_url != image_url:
-                    product.image_url = image_url
-                    
-                    start_time = time.time()
-                    db.session.commit()
-                    end_time = time.time()
-                    
-                    db_tracker.log_query('UPDATE', f"UPDATE products SET image_url = '{image_url}' WHERE name = '{name}'", start_time, end_time, 1, database_type='mysql')
-            
-            print("Database initialized with sample data!")
+            print(f"Database already contains {Category.query.count()} categories and {Product.query.count()} products - skipping CSV load")
     
     app.run(debug=True, host='0.0.0.0', port=5001) 

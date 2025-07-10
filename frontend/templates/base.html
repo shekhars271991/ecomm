@@ -130,6 +130,53 @@
         </div>
     </footer>
 
+    <!-- Product Detail Modal -->
+    <div class="modal fade product-modal" id="productModal" tabindex="-1" aria-labelledby="productModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="productModalLabel">Product Details</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-5">
+                            <img id="modalProductImage" src="" alt="" class="product-modal-image">
+                        </div>
+                        <div class="col-md-7">
+                            <div id="modalProductCategory" class="product-category-badge mb-2"></div>
+                            <div id="modalProductStock" class="product-stock-badge mb-3"></div>
+                            <h3 id="modalProductName" class="mb-3"></h3>
+                            <div id="modalProductPrice" class="product-modal-price"></div>
+                            <div id="modalProductDescription" class="product-modal-description"></div>
+                            
+                            <div class="product-modal-meta">
+                                <div class="row">
+                                    <div class="col-6">
+                                        <strong>Price:</strong> <span id="modalProductPriceText"></span>
+                                    </div>
+                                    <div class="col-6">
+                                        <strong>Stock:</strong> <span id="modalProductStockText"></span>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="product-modal-actions">
+                                <div class="product-modal-quantity">
+                                    <label for="modalQuantity" class="form-label">Quantity:</label>
+                                    <input type="number" id="modalQuantity" value="1" min="1" max="100" class="form-control">
+                                </div>
+                                <button type="button" id="modalAddToCart" class="btn btn-add-to-cart">
+                                    <i class="fas fa-cart-plus me-2"></i>Add to Cart
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     <script src="{{ url_for('static', filename='js/demo.js') }}"></script>
     
@@ -221,11 +268,99 @@
             const images = document.querySelectorAll('.product-image, .cart-item-image');
             images.forEach(function(img) {
                 img.onerror = function() {
-                    this.style.display = 'none';
-                    this.parentElement.classList.add('broken-image');
+                    this.classList.add('broken');
                 };
             });
         });
+
+        // Product Modal Functions
+        async function showProductModal(productId) {
+            try {
+                const response = await fetch(`/api/products/${productId}`);
+                if (!response.ok) {
+                    throw new Error('Failed to fetch product details');
+                }
+                
+                const data = await response.json();
+                const product = data.product;
+                
+                // Populate modal with product data
+                document.getElementById('productModalLabel').textContent = product.name;
+                document.getElementById('modalProductName').textContent = product.name;
+                document.getElementById('modalProductDescription').textContent = product.description;
+                document.getElementById('modalProductPrice').textContent = `$${parseFloat(product.price).toFixed(2)}`;
+                document.getElementById('modalProductPriceText').textContent = `$${parseFloat(product.price).toFixed(2)}`;
+                document.getElementById('modalProductStockText').textContent = `${product.stock} units`;
+                
+                // Set product image
+                const modalImage = document.getElementById('modalProductImage');
+                modalImage.src = product.image_url;
+                modalImage.alt = product.name;
+                modalImage.onerror = function() {
+                    this.classList.add('broken');
+                };
+                
+                // Set category badge
+                document.getElementById('modalProductCategory').textContent = product.category.name;
+                
+                // Set stock badge
+                const stockBadge = document.getElementById('modalProductStock');
+                if (product.stock > 0) {
+                    stockBadge.textContent = `In Stock (${product.stock})`;
+                    stockBadge.className = 'product-stock-badge in-stock';
+                } else {
+                    stockBadge.textContent = 'Out of Stock';
+                    stockBadge.className = 'product-stock-badge out-of-stock';
+                }
+                
+                // Set quantity input max
+                const quantityInput = document.getElementById('modalQuantity');
+                quantityInput.max = product.stock;
+                quantityInput.value = 1;
+                
+                // Set up add to cart button
+                const addToCartBtn = document.getElementById('modalAddToCart');
+                addToCartBtn.disabled = product.stock === 0;
+                addToCartBtn.onclick = function() {
+                    addToCartFromModal(product.id);
+                };
+                
+                // Show the modal
+                const modal = new bootstrap.Modal(document.getElementById('productModal'));
+                modal.show();
+                
+            } catch (error) {
+                console.error('Error fetching product details:', error);
+                alert('Error loading product details. Please try again.');
+            }
+        }
+
+        async function addToCartFromModal(productId) {
+            try {
+                const quantity = document.getElementById('modalQuantity').value;
+                
+                const formData = new FormData();
+                formData.append('quantity', quantity);
+                
+                const response = await fetch(`/add_to_cart/${productId}`, {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                if (response.ok) {
+                    // Close modal and refresh page to update cart count
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('productModal'));
+                    modal.hide();
+                    location.reload();
+                } else {
+                    throw new Error('Failed to add to cart');
+                }
+                
+            } catch (error) {
+                console.error('Error adding to cart:', error);
+                alert('Error adding item to cart. Please try again.');
+            }
+        }
     </script>
     
     {% block scripts %}{% endblock %}

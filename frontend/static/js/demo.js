@@ -88,7 +88,7 @@ class DatabaseDemo {
         demoPanel.className = 'demo-panel';
         demoPanel.innerHTML = `
             <div class="demo-header">
-                <h5><i class="fas fa-database"></i> DB Log</h5>
+                <!-- <h5><i class="fas fa-database"></i> DB Log</h5> -->
                 <div class="demo-controls">
                     <div class="demo-filter-container">
                         <select id="demo-db-filter" class="demo-filter-select" onchange="databaseDemo.setFilter(this.value)">
@@ -102,9 +102,6 @@ class DatabaseDemo {
                     </button>
                     <button class="btn btn-sm btn-outline-light" onclick="databaseDemo.clearQueries()">
                         <i class="fas fa-trash"></i> Clear
-                    </button>
-                    <button class="btn btn-sm btn-outline-light" onclick="databaseDemo.togglePanel()">
-                        <i class="fas fa-times"></i>
                     </button>
                 </div>
             </div>
