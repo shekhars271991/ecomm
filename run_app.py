@@ -109,25 +109,41 @@ def check_docker():
     except FileNotFoundError:
         return False
 
-def check_mysql_container():
-    """Check if MySQL container is running"""
+def check_containers():
+    """Check if all required containers are running"""
     try:
         result = subprocess.run(["docker", "ps"], capture_output=True, text=True)
-        return "grocery_mysql" in result.stdout
+        containers = {
+            'mysql': "grocery_mysql" in result.stdout,
+            'aerospike': "grocery_aerospike" in result.stdout,
+            'aerospike_tools': "grocery_aerospike_tools" in result.stdout
+        }
+        return containers
     except:
-        return False
+        return {'mysql': False, 'aerospike': False, 'aerospike_tools': False}
 
-def start_mysql_container():
-    """Start MySQL container using docker-compose"""
-    print_colored("📦 Starting MySQL container...", Colors.YELLOW)
+def start_containers():
+    """Start all containers using docker-compose"""
+    print_colored("📦 Starting database containers...", Colors.YELLOW)
     result = subprocess.run(["docker-compose", "up", "-d"], capture_output=True, text=True)
     if result.returncode == 0:
-        print_colored("✅ MySQL container started", Colors.GREEN)
-        print_colored("⏳ Waiting for MySQL to be ready...", Colors.YELLOW)
-        time.sleep(10)
+        print_colored("✅ All containers started", Colors.GREEN)
+        print_colored("⏳ Waiting for containers to be ready...", Colors.YELLOW)
+        
+        # Wait longer for Aerospike to initialize
+        time.sleep(15)
+        
+        # Check container status
+        containers = check_containers()
+        for name, running in containers.items():
+            if running:
+                print_colored(f"✅ {name.replace('_', ' ').title()} container is running", Colors.GREEN)
+            else:
+                print_colored(f"⚠️  {name.replace('_', ' ').title()} container may not be ready", Colors.YELLOW)
+        
         return True
     else:
-        print_colored(f"❌ Failed to start MySQL container: {result.stderr}", Colors.RED)
+        print_colored(f"❌ Failed to start containers: {result.stderr}", Colors.RED)
         return False
 
 def install_backend_dependencies():
@@ -367,12 +383,16 @@ def main():
         print_colored("❌ Docker is not running. Please start Docker first.", Colors.RED)
         sys.exit(1)
     
-    # Check/Start MySQL container
-    if not check_mysql_container():
-        if not start_mysql_container():
+    # Check/Start all containers
+    containers = check_containers()
+    if not all(containers.values()):
+        if not start_containers():
             sys.exit(1)
     else:
-        print_colored("✅ MySQL container is already running", Colors.GREEN)
+        print_colored("✅ All containers are already running", Colors.GREEN)
+        for name, running in containers.items():
+            if running:
+                print_colored(f"✅ {name.replace('_', ' ').title()} container is running", Colors.GREEN)
     
     # Install dependencies
     if not install_backend_dependencies():
@@ -403,6 +423,7 @@ def main():
     
     print_colored("│  🔧 Backend:   http://localhost:5001               │", Colors.BLUE)
     print_colored("│  🐳 MySQL:     localhost:3306                      │", Colors.BLUE)
+    print_colored("│  🚀 Aerospike: localhost:3000                      │", Colors.BLUE)
     print_colored("│                                                     │", Colors.BLUE)
     print_colored("│  📄 Backend logs: tail -f backend.log              │", Colors.BLUE)
     print_colored("│  📄 Frontend logs: tail -f frontend.log            │", Colors.BLUE)
