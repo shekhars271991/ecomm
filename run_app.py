@@ -10,6 +10,7 @@ import time
 import signal
 import requests
 import threading
+import argparse
 from pathlib import Path
 
 # Colors for terminal output
@@ -23,10 +24,32 @@ class Colors:
 # Global variables to track processes
 backend_process = None
 frontend_process = None
+refresh_data = False
 
 def print_colored(message, color=Colors.NC):
     """Print colored message to terminal"""
     print(f"{color}{message}{Colors.NC}")
+
+def parse_arguments():
+    """Parse command line arguments"""
+    parser = argparse.ArgumentParser(
+        description="🍎 Grocery Delivery App Launcher",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  python run_app.py           # Normal startup (skip data load if data exists)
+  python run_app.py -r        # Force refresh all data
+  python run_app.py --refresh # Force refresh all data (long form)
+        """
+    )
+    
+    parser.add_argument(
+        '-r', '--refresh',
+        action='store_true',
+        help='Force refresh all data from CSV (truncates existing data)'
+    )
+    
+    return parser.parse_args()
 
 def cleanup_processes():
     """Clean up background processes"""
@@ -88,7 +111,8 @@ def start_mysql_container():
     result = subprocess.run(["docker-compose", "up", "-d"], capture_output=True, text=True)
     if result.returncode == 0:
         print_colored("✅ MySQL container started", Colors.GREEN)
-        time.sleep(5)
+        print_colored("⏳ Waiting for MySQL to be ready...", Colors.YELLOW)
+        time.sleep(10)
         return True
     else:
         print_colored(f"❌ Failed to start MySQL container: {result.stderr}", Colors.RED)
@@ -149,30 +173,49 @@ def start_backend():
     backend_dir = Path("backend")
     backend_log = Path("backend.log")
     
+    # Build command with refresh flag if needed
+    cmd = [sys.executable, "app.py"]
+    if refresh_data:
+        cmd.append("--refresh")
+        print_colored("🔄 Backend will refresh all data from CSV", Colors.YELLOW)
+    
     with open(backend_log, 'w') as log_file:
         backend_process = subprocess.Popen(
-            [sys.executable, "app.py"],
+            cmd,
             cwd=backend_dir,
             stdout=log_file,
             stderr=subprocess.STDOUT,
             text=True
         )
     
-    # Wait for backend to start
-    print_colored("⏳ Waiting for backend to start...", Colors.YELLOW)
-    time.sleep(3)
+    # Wait for backend to start with appropriate messaging
+    if refresh_data:
+        print_colored("⏳ Waiting for backend to start (refreshing data from CSV...)...", Colors.YELLOW)
+        time.sleep(8)
+    else:
+        print_colored("⏳ Waiting for backend to start...", Colors.YELLOW)
+        time.sleep(5)
     
     # Check if backend is responding
-    for _ in range(10):  # Try for 10 seconds
+    max_retries = 12
+    for retry in range(max_retries):
         try:
-            response = requests.get("http://localhost:5001/api/categories", timeout=1)
+            response = requests.get("http://localhost:5001/api/categories", timeout=2)
             if response.status_code == 200:
                 print_colored("✅ Backend API started successfully on http://localhost:5001", Colors.GREEN)
                 return True
         except requests.RequestException:
-            time.sleep(1)
+            if retry < max_retries - 1:
+                if refresh_data:
+                    print_colored(f"⏳ Backend still loading data... (attempt {retry + 1}/{max_retries})", Colors.YELLOW)
+                    time.sleep(8)
+                else:
+                    print_colored(f"⏳ Backend still starting... (attempt {retry + 1}/{max_retries})", Colors.YELLOW)
+                    time.sleep(5)
     
     print_colored("❌ Backend failed to start. Check backend.log for details.", Colors.RED)
+    print_colored("📄 Check backend.log for details:", Colors.RED)
+    print_colored("   tail -f backend.log", Colors.YELLOW)
     return False
 
 def start_frontend():
@@ -211,11 +254,20 @@ def start_frontend():
 
 def main():
     """Main function to orchestrate application startup"""
+    global refresh_data
+    
+    # Parse arguments
+    args = parse_arguments()
+    refresh_data = args.refresh
+    
     # Set up signal handlers
     signal.signal(signal.SIGINT, signal_handler)
     signal.signal(signal.SIGTERM, signal_handler)
     
     print_colored("🚀 Starting Grocery Delivery App...", Colors.GREEN)
+    
+    if refresh_data:
+        print_colored("🔄 Data refresh mode enabled - will reload all data from CSV", Colors.YELLOW)
     
     # Check Docker
     if not check_docker():
@@ -257,6 +309,11 @@ def main():
     print_colored("│  📄 Backend logs: tail -f backend.log              │", Colors.BLUE)
     print_colored("│  📄 Frontend logs: tail -f frontend.log            │", Colors.BLUE)
     print_colored("│                                                     │", Colors.BLUE)
+    
+    if refresh_data:
+        print_colored("│  🔄 Data was refreshed from CSV                     │", Colors.BLUE)
+        print_colored("│                                                     │", Colors.BLUE)
+    
     print_colored("│  Press Ctrl+C to stop all applications             │", Colors.BLUE)
     print_colored("│                                                     │", Colors.BLUE)
     print_colored("└─────────────────────────────────────────────────────┘", Colors.BLUE)

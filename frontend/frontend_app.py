@@ -30,7 +30,7 @@ def get_cart_count():
     session_id = get_session_id()
     cart_data, success = make_api_request('cart', method='GET', params={'session_id': session_id})
     
-    if success:
+    if success and isinstance(cart_data, dict):
         cart_items = cart_data.get('data', {}).get('cart_items', [])
         return sum(item.get('quantity', 0) for item in cart_items)
     
@@ -111,14 +111,29 @@ def cart():
     # Get cart items from database
     cart_data, success = make_api_request('cart', method='GET', params={'session_id': session_id})
     
-    if success:
-        cart_items = cart_data.get('data', {}).get('cart_items', [])
-        total = cart_data.get('data', {}).get('total', 0)
+    if success and isinstance(cart_data, dict):
+        data = cart_data.get('data', {})
+        cart_items = data.get('cart_items', [])
+        total = data.get('total', 0)
+        subtotal = data.get('subtotal', 0)
+        total_quantity = data.get('total_quantity', 0)
+        discount_percentage = data.get('discount_percentage', 0)
+        discount_amount = data.get('discount_amount', 0)
     else:
         cart_items = []
         total = 0
+        subtotal = 0
+        total_quantity = 0
+        discount_percentage = 0
+        discount_amount = 0
     
-    return render_template('cart.html', cart_items=cart_items, total=total)
+    return render_template('cart.html', 
+                           cart_items=cart_items, 
+                           total=total,
+                           subtotal=subtotal,
+                           total_quantity=total_quantity,
+                           discount_percentage=discount_percentage,
+                           discount_amount=discount_amount)
 
 @app.route('/add_to_cart/<int:product_id>', methods=['POST'])
 def add_to_cart(product_id):
@@ -132,7 +147,7 @@ def add_to_cart(product_id):
         'quantity': quantity
     })
     
-    if success:
+    if success and isinstance(cart_data, dict):
         message = cart_data.get('data', {}).get('message', 'Item added to cart')
         flash(message, 'success')
     else:
@@ -145,7 +160,7 @@ def remove_from_cart(item_id):
     # Remove item from cart via API
     cart_data, success = make_api_request(f'cart/{item_id}', method='DELETE')
     
-    if success:
+    if success and isinstance(cart_data, dict):
         message = cart_data.get('data', {}).get('message', 'Item removed from cart')
         flash(message, 'success')
     else:
@@ -180,9 +195,10 @@ def checkout():
     # Get cart items from database
     cart_data, success = make_api_request('cart', method='GET', params={'session_id': session_id})
     
-    if success:
-        cart_items = cart_data.get('data', {}).get('cart_items', [])
-        total = cart_data.get('data', {}).get('total', 0)
+    if success and isinstance(cart_data, dict):
+        data = cart_data.get('data', {})
+        cart_items = data.get('cart_items', [])
+        total = data.get('total', 0)
         
         if not cart_items:
             flash('Your cart is empty', 'error')

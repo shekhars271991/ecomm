@@ -128,13 +128,23 @@ class MySQLManager:
         
         self.log_query('SELECT', f"SELECT * FROM cart WHERE user_session = '{session_id}'", start_time, end_time, len(cart_items))
         
-        return [{
-            'id': item.id,
-            'product_id': item.product_id,
-            'quantity': item.quantity,
-            'created_at': item.created_at.isoformat(),
-            'updated_at': item.updated_at.isoformat()
-        } for item in cart_items]
+        result = []
+        for item in cart_items:
+            # Get product information
+            product = self.get_product_by_id(item.product_id)
+            if product:
+                cart_item = {
+                    'id': item.id,
+                    'product_id': item.product_id,
+                    'quantity': item.quantity,
+                    'created_at': item.created_at.isoformat(),
+                    'updated_at': item.updated_at.isoformat(),
+                    'product': product,
+                    'total': float(product['price']) * item.quantity
+                }
+                result.append(cart_item)
+        
+        return result
     
     def add_to_cart(self, session_id: str, product_id: int, quantity: int = 1) -> Dict:
         """Add item to cart in MySQL"""

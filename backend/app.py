@@ -8,6 +8,7 @@ import time
 import logging
 from werkzeug.security import generate_password_hash, check_password_hash
 from unified_database_manager import UnifiedDatabaseManager
+import sys
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'your-secret-key-here'
@@ -83,7 +84,6 @@ class DatabaseTracker:
             db.session.commit()
         except Exception as e:
             db.session.rollback()
-            print(f"Failed to clear queries: {e}")
 
 # Global tracker instance
 db_tracker = DatabaseTracker()
@@ -396,14 +396,29 @@ class CartResource(Resource):
         
         processed_cart_items = []
         total = 0
+        total_quantity = 0
         
         for cart_item in cart_items:
             processed_cart_items.append(cart_item)
             total += cart_item.get('total', 0)
+            total_quantity += cart_item.get('quantity', 0)
+        
+        # Apply 10% discount if total quantity > 5
+        discount_amount = 0
+        discount_percentage = 0
+        if total_quantity > 5:
+            discount_percentage = 10
+            discount_amount = total * 0.10
+        
+        final_total = total - discount_amount
         
         return create_api_response({
             'cart_items': processed_cart_items,
-            'total': total
+            'subtotal': total,
+            'total_quantity': total_quantity,
+            'discount_percentage': discount_percentage,
+            'discount_amount': discount_amount,
+            'total': final_total
         }, True, "Cart retrieved successfully")
     
     def post(self):
@@ -716,9 +731,12 @@ api.add_resource(DatabaseSwitchResource, '/api/database-switch')
 # INITIALIZE DATABASE
 # -------------------------------
 
-if __name__ == '__main__':
-    with app.app_context():
+def initialize_database(force_refresh=False):
+    """Initialize database with optional force refresh"""
+    try:
+        # Try to create tables
         db.create_all()
+        print("✅ Database tables created/verified successfully")
         
         # Add database_type column to db_logs table if it doesn't exist
         try:
@@ -729,10 +747,10 @@ if __name__ == '__main__':
             try:
                 db.session.execute(db.text("ALTER TABLE db_logs ADD COLUMN database_type VARCHAR(50) NOT NULL DEFAULT 'mysql'"))
                 db.session.commit()
-                print("Added database_type column to db_logs table")
+                print("✅ Added database_type column to db_logs table")
             except Exception as e:
                 db.session.rollback()
-                print(f"Failed to add database_type column: {e}")
+                print(f"⚠️  Failed to add database_type column: {e}")
         
         # Initialize database manager
         models = {
@@ -743,6 +761,29 @@ if __name__ == '__main__':
         db_manager.initialize(app, db, db_tracker, models)
         
         # Clear cart table on startup
+        clear_cart_on_startup()
+        
+        # Check if we need to load data
+        should_load_data = force_refresh or should_load_initial_data()
+        
+        if should_load_data:
+            load_initial_data(force_refresh)
+        else:
+            print(f"✅ Database already contains {Category.query.count()} categories and {Product.query.count()} products - skipping data load")
+            
+        return True
+        
+    except Exception as e:
+        print(f"❌ Database initialization failed: {e}")
+        print("⚠️  This might be due to:")
+        print("   - MySQL container not running (run: docker-compose up -d)")
+        print("   - Database credentials incorrect")
+        print("   - Network connection issues")
+        return False
+
+def clear_cart_on_startup():
+    """Clear cart table on startup"""
+    try:
         start_time = time.time()
         cart_items = Cart.query.all()
         item_count = len(cart_items)
@@ -755,30 +796,81 @@ if __name__ == '__main__':
         
         if item_count > 0:
             db_tracker.log_query('DELETE', f"DELETE FROM cart (cleared {item_count} items on startup)", start_time, end_time, item_count, database_type='mysql')
+            print(f"✅ Cleared {item_count} cart items on startup")
         
-        # Load data from CSV file if database is empty
-        if Category.query.count() == 0:
-            print("Database is empty, loading data from CSV file...")
-            try:
-                from csv_data_loader import CSVDataLoader
-                
-                # Get the individual managers from the unified manager
-                mysql_manager = db_manager.mysql_manager
-                aerospike_manager = db_manager.aerospike_manager
-                
-                # Create CSV loader
-                csv_loader = CSVDataLoader(mysql_manager, aerospike_manager)
-                
-                # Load data from CSV (this will truncate existing data first)
-                csv_file_path = os.path.join(os.path.dirname(__file__), 'datasets', 'GroceryDataset.csv')
-                csv_loader.load_all_data(csv_file_path)
-                
-                print("Data loaded successfully from CSV file!")
-                
-            except Exception as e:
-                print(f"Error loading data from CSV: {e}")
-                print("CSV data loading failed - check init.sql ran properly and CSV file exists")
+    except Exception as e:
+        print(f"⚠️  Failed to clear cart on startup: {e}")
+        if db:
+            db.session.rollback()
+
+def should_load_initial_data():
+    """Check if we should load initial data"""
+    try:
+        category_count = Category.query.count()
+        product_count = Product.query.count()
+        
+        # Load data if either table is empty
+        if category_count == 0 or product_count == 0:
+            print(f"📊 Database check: {category_count} categories, {product_count} products")
+            return True
+        
+        return False
+        
+    except Exception as e:
+        print(f"⚠️  Failed to check database state: {e}")
+        return True  # Default to loading if we can't check
+
+def load_initial_data(force_refresh=False):
+    """Load initial data from CSV"""
+    try:
+        if force_refresh:
+            print("🔄 Force refresh requested - loading fresh data...")
         else:
-            print(f"Database already contains {Category.query.count()} categories and {Product.query.count()} products - skipping CSV load")
+            print("📦 Database is empty, loading data from CSV file...")
+        
+        from csv_data_loader import CSVDataLoader
+        
+        # Get the individual managers from the unified manager
+        mysql_manager = db_manager.mysql_manager
+        aerospike_manager = db_manager.aerospike_manager
+        
+        # Create CSV loader
+        csv_loader = CSVDataLoader(mysql_manager, aerospike_manager)
+        
+        # Load data from CSV
+        csv_file_path = os.path.join(os.path.dirname(__file__), 'datasets', 'GroceryDataset.csv')
+        
+        if not os.path.exists(csv_file_path):
+            print(f"❌ CSV file not found: {csv_file_path}")
+            return False
+        
+        # Skip truncation if not force refresh and data already exists
+        skip_truncate = not force_refresh and not should_load_initial_data()
+        
+        csv_loader.load_all_data(csv_file_path, skip_truncate=skip_truncate)
+        
+        print("✅ Data loaded successfully from CSV file!")
+        return True
+        
+    except Exception as e:
+        print(f"❌ Error loading data from CSV: {e}")
+        print("⚠️  CSV data loading failed - check that CSV file exists and is readable")
+        return False
+
+if __name__ == '__main__':
+    # Check for force refresh parameter
+    force_refresh = '--refresh' in sys.argv or '-r' in sys.argv
     
+    if force_refresh:
+        print("🔄 Force refresh mode enabled")
+    
+    with app.app_context():
+        # Initialize database
+        if not initialize_database(force_refresh):
+            print("❌ Failed to initialize database. Application cannot start.")
+            sys.exit(1)
+        
+        print("✅ Database initialization complete")
+    
+    print("🚀 Starting Flask application...")
     app.run(debug=True, host='0.0.0.0', port=5001) 

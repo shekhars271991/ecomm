@@ -183,7 +183,24 @@ class AerospikeManager:
             end_time = time.time()
             
             self.log_query('SCAN', f'SCAN grocery.cart WHERE user_session = "{session_id}"', start_time, end_time, len(cart_items))
-            return cart_items
+            
+            # Add product information to each cart item
+            result = []
+            for item in cart_items:
+                product = self.get_product_by_id(item['product_id'])
+                if product:
+                    cart_item = {
+                        'id': item['id'],
+                        'product_id': item['product_id'],
+                        'quantity': item['quantity'],
+                        'created_at': item['created_at'],
+                        'updated_at': item['updated_at'],
+                        'product': product,
+                        'total': float(product['price']) * item['quantity']
+                    }
+                    result.append(cart_item)
+            
+            return result
         except Exception as e:
             end_time = time.time()
             self.log_query('SCAN', f'SCAN grocery.cart (ERROR: {str(e)})', start_time, end_time, 0)

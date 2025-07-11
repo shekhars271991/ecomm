@@ -243,6 +243,11 @@ class CSVDataLoader:
             return
         
         try:
+            # Check if category already exists
+            existing_category = self.mysql_manager.Category.query.filter_by(name=category_name).first()
+            if existing_category:
+                return  # Skip if already exists
+            
             # Create new category with proper icon
             category = self.mysql_manager.Category(
                 name=category_name,
@@ -263,6 +268,11 @@ class CSVDataLoader:
             return
         
         try:
+            # Check if product already exists
+            existing_product = self.mysql_manager.Product.query.filter_by(name=product_data['name']).first()
+            if existing_product:
+                return  # Skip if already exists
+            
             # Create new product with category-based image
             product = self.mysql_manager.Product(
                 name=product_data['name'],
@@ -289,6 +299,15 @@ class CSVDataLoader:
         
         try:
             key = ('grocery', 'categories', str(category_id))
+            
+            # Check if category already exists
+            try:
+                existing_key, existing_metadata, existing_record = self.aerospike_manager.aerospike_client.get(key)
+                if existing_record:
+                    return  # Skip if already exists
+            except:
+                pass  # Key doesn't exist, proceed to create
+            
             bins = {
                 'id': category_id,
                 'name': category_name,
@@ -307,6 +326,15 @@ class CSVDataLoader:
         
         try:
             key = ('grocery', 'products', str(product_id))
+            
+            # Check if product already exists
+            try:
+                existing_key, existing_metadata, existing_record = self.aerospike_manager.aerospike_client.get(key)
+                if existing_record:
+                    return  # Skip if already exists
+            except:
+                pass  # Key doesn't exist, proceed to create
+            
             bins = {
                 'id': product_id,
                 'name': product_data['name'],
@@ -323,15 +351,28 @@ class CSVDataLoader:
         except Exception as e:
             print(f"Error creating Aerospike product {product_data['name']}: {e}")
     
-    def load_data_to_mysql(self, products: List[Dict], category_mapping: Dict[str, int]):
+    def load_data_to_mysql(self, products: List[Dict], category_mapping: Dict[str, int], skip_duplicates: bool = False):
         """Load data into MySQL database"""
         print("Loading data into MySQL...")
         
         # Insert categories
+        categories_inserted = 0
         for category_name, category_id in category_mapping.items():
+            if skip_duplicates:
+                # Check if category exists before inserting
+                if self.mysql_manager and self.mysql_manager.Category:
+                    existing = self.mysql_manager.Category.query.filter_by(name=category_name).first()
+                    if existing:
+                        continue
+            
             self.create_mysql_category(category_name, category_id)
+            categories_inserted += 1
+        
+        if skip_duplicates:
+            print(f"Inserted {categories_inserted} new categories into MySQL")
         
         # Insert products
+        products_inserted = 0
         for i, product in enumerate(products, 1):
             category_id = category_mapping[product['category']]
             
@@ -347,22 +388,53 @@ class CSVDataLoader:
                 'image_url': self.get_category_image_url(product['category'])
             }
             
+            if skip_duplicates:
+                # Check if product exists before inserting
+                if self.mysql_manager and self.mysql_manager.Product:
+                    existing = self.mysql_manager.Product.query.filter_by(name=product_data['name']).first()
+                    if existing:
+                        continue
+            
             self.create_mysql_product(product_data)
+            products_inserted += 1
             
             if i % 100 == 0:
-                print(f"Inserted {i} products into MySQL...")
+                if skip_duplicates:
+                    print(f"Processed {i} products, inserted {products_inserted} new products into MySQL...")
+                else:
+                    print(f"Inserted {i} products into MySQL...")
         
-        print(f"Successfully loaded {len(products)} products into MySQL")
+        if skip_duplicates:
+            print(f"Successfully processed {len(products)} products, inserted {products_inserted} new products into MySQL")
+        else:
+            print(f"Successfully loaded {len(products)} products into MySQL")
     
-    def load_data_to_aerospike(self, products: List[Dict], category_mapping: Dict[str, int]):
+    def load_data_to_aerospike(self, products: List[Dict], category_mapping: Dict[str, int], skip_duplicates: bool = False):
         """Load data into Aerospike database"""
         print("Loading data into Aerospike...")
         
         # Insert categories
+        categories_inserted = 0
         for category_name, category_id in category_mapping.items():
+            if skip_duplicates:
+                # Check if category exists before inserting
+                key = ('grocery', 'categories', str(category_id))
+                try:
+                    if self.aerospike_manager and self.aerospike_manager.aerospike_client:
+                        existing_key, existing_metadata, existing_record = self.aerospike_manager.aerospike_client.get(key)
+                        if existing_record:
+                            continue
+                except:
+                    pass  # Key doesn't exist, proceed to create
+            
             self.create_aerospike_category(category_name, category_id)
+            categories_inserted += 1
+        
+        if skip_duplicates:
+            print(f"Inserted {categories_inserted} new categories into Aerospike")
         
         # Insert products
+        products_inserted = 0
         for i, product in enumerate(products, 1):
             category_id = category_mapping[product['category']]
             
@@ -378,12 +450,30 @@ class CSVDataLoader:
                 'image_url': self.get_category_image_url(product['category'])
             }
             
+            if skip_duplicates:
+                # Check if product exists before inserting
+                key = ('grocery', 'products', str(i))
+                try:
+                    if self.aerospike_manager and self.aerospike_manager.aerospike_client:
+                        existing_key, existing_metadata, existing_record = self.aerospike_manager.aerospike_client.get(key)
+                        if existing_record:
+                            continue
+                except:
+                    pass  # Key doesn't exist, proceed to create
+            
             self.create_aerospike_product(product_data, i)
+            products_inserted += 1
             
             if i % 100 == 0:
-                print(f"Inserted {i} products into Aerospike...")
+                if skip_duplicates:
+                    print(f"Processed {i} products, inserted {products_inserted} new products into Aerospike...")
+                else:
+                    print(f"Inserted {i} products into Aerospike...")
         
-        print(f"Successfully loaded {len(products)} products into Aerospike")
+        if skip_duplicates:
+            print(f"Successfully processed {len(products)} products, inserted {products_inserted} new products into Aerospike")
+        else:
+            print(f"Successfully loaded {len(products)} products into Aerospike")
     
     def load_all_data(self, csv_file_path: str, skip_truncate: bool = False):
         """Complete data loading process"""
@@ -397,20 +487,20 @@ class CSVDataLoader:
             
             # Step 3: Truncate existing data (optional)
             if not skip_truncate:
-                print("Truncating all existing data...")
+                print("🔄 Truncating all existing data...")
                 self.truncate_mysql_data()
                 self.truncate_aerospike_data()
             else:
-                print("Skipping truncation (manual truncation expected)")
+                print("⏭️  Skipping truncation - will skip duplicates during insertion")
             
             # Step 4: Load data into both databases
-            self.load_data_to_mysql(products, category_mapping)
-            self.load_data_to_aerospike(products, category_mapping)
+            self.load_data_to_mysql(products, category_mapping, skip_duplicates=skip_truncate)
+            self.load_data_to_aerospike(products, category_mapping, skip_duplicates=skip_truncate)
             
-            print("Data loading completed successfully!")
-            print(f"Total products loaded: {len(products)}")
-            print(f"Total categories: {len(category_mapping)}")
+            print("✅ Data loading completed successfully!")
+            print(f"📊 Total products processed: {len(products)}")
+            print(f"📊 Total categories: {len(category_mapping)}")
             
         except Exception as e:
-            print(f"Error during data loading: {e}")
+            print(f"❌ Error during data loading: {e}")
             raise 

@@ -49,8 +49,21 @@
                 <h4 class="mb-3">Order Summary</h4>
                 <div class="d-flex justify-content-between mb-2">
                     <span>Subtotal:</span>
+                    <span>${{ "%.2f"|format(subtotal if subtotal is defined else total) }}</span>
+                </div>
+                {% if discount_percentage and discount_percentage > 0 %}
+                <div class="d-flex justify-content-between mb-2 text-success">
+                    <span>
+                        <i class="fas fa-percent me-1"></i>
+                        Bulk Discount ({{ discount_percentage }}%):
+                    </span>
+                    <span>-${{ "%.2f"|format(discount_amount) }}</span>
+                </div>
+                <div class="d-flex justify-content-between mb-2">
+                    <span>After Discount:</span>
                     <span>${{ "%.2f"|format(total) }}</span>
                 </div>
+                {% endif %}
                 <div class="d-flex justify-content-between mb-2">
                     <span>Delivery Fee:</span>
                     <span>$2.99</span>
@@ -60,6 +73,18 @@
                     <strong>Total:</strong>
                     <strong>${{ "%.2f"|format(total + 2.99) }}</strong>
                 </div>
+                {% if discount_percentage and discount_percentage > 0 %}
+                <div class="alert alert-success text-center mb-3">
+                    <i class="fas fa-gift me-2"></i>
+                    <strong>Bulk Discount Applied!</strong><br>
+                    <small>You saved ${{ "%.2f"|format(discount_amount) }} with {{ total_quantity }} items!</small>
+                </div>
+                {% elif total_quantity is defined and total_quantity > 0 and total_quantity <= 5 %}
+                <div class="alert alert-info text-center mb-3">
+                    <i class="fas fa-info-circle me-2"></i>
+                    <small>Add {{ 6 - total_quantity }} more item{{ 's' if (6 - total_quantity) != 1 else '' }} to get 10% discount!</small>
+                </div>
+                {% endif %}
                 
                 {% if session.user_id %}
                 <a href="{{ url_for('checkout') }}" class="btn btn-success btn-lg w-100">

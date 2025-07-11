@@ -30,11 +30,15 @@
                 </ul>
                 
                 <form class="d-flex me-3" method="GET" action="{{ url_for('products') }}">
-                    <div class="input-group">
-                        <input class="form-control" type="search" placeholder="Search products..." name="search" value="{{ request.args.get('search', '') }}">
-                        <button class="btn btn-outline-light" type="submit">
-                            <i class="fas fa-search"></i>
-                        </button>
+                    <div class="search-container">
+                        <div class="search-input-group">
+                            <i class="fas fa-search search-icon"></i>
+                            <input class="search-input" type="search" placeholder="Search products..." name="search" value="{{ request.args.get('search', '') }}" autocomplete="off">
+                            <button class="search-button" type="submit">
+                                <i class="fas fa-arrow-right"></i>
+                            </button>
+                        </div>
+                        <div class="search-suggestions" id="searchSuggestions"></div>
                     </div>
                 </form>
                 
@@ -179,6 +183,220 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     <script src="{{ url_for('static', filename='js/demo.js') }}"></script>
+    
+    <!-- Enhanced Search Functionality -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const searchInput = document.querySelector('.search-input');
+            const searchContainer = document.querySelector('.search-container');
+            const searchButton = document.querySelector('.search-button');
+            const searchSuggestions = document.querySelector('.search-suggestions');
+            
+            // Add ripple effect on search button click
+            searchButton.addEventListener('click', function(e) {
+                e.preventDefault();
+                
+                // Create ripple effect
+                const ripple = document.createElement('span');
+                ripple.style.position = 'absolute';
+                ripple.style.background = 'rgba(255, 255, 255, 0.6)';
+                ripple.style.borderRadius = '50%';
+                ripple.style.transform = 'scale(0)';
+                ripple.style.animation = 'ripple 0.6s linear';
+                ripple.style.left = '50%';
+                ripple.style.top = '50%';
+                ripple.style.width = '20px';
+                ripple.style.height = '20px';
+                ripple.style.marginLeft = '-10px';
+                ripple.style.marginTop = '-10px';
+                
+                this.appendChild(ripple);
+                
+                // Remove ripple after animation
+                setTimeout(() => {
+                    ripple.remove();
+                }, 600);
+                
+                // Slight delay before form submission for visual effect
+                setTimeout(() => {
+                    searchInput.closest('form').submit();
+                }, 100);
+            });
+            
+            // Enhanced focus animations
+            searchInput.addEventListener('focus', function() {
+                searchContainer.classList.add('search-focused');
+                
+                // Add a subtle glow animation
+                this.style.textShadow = '0 0 8px rgba(255, 255, 255, 0.3)';
+            });
+            
+            searchInput.addEventListener('blur', function() {
+                searchContainer.classList.remove('search-focused');
+                this.style.textShadow = 'none';
+            });
+            
+            // Typing animation effect
+            let typingTimer;
+            searchInput.addEventListener('input', function() {
+                const value = this.value.trim();
+                
+                // Clear previous timer
+                clearTimeout(typingTimer);
+                
+                // Add typing indicator
+                searchContainer.classList.add('search-typing');
+                
+                // Remove typing indicator after user stops typing
+                typingTimer = setTimeout(() => {
+                    searchContainer.classList.remove('search-typing');
+                }, 500);
+                
+                // Show/hide suggestions based on input
+                if (value.length > 0) {
+                    showSearchSuggestions(value);
+                } else {
+                    hideSearchSuggestions();
+                }
+            });
+            
+            // Mock search suggestions (you can replace this with actual API calls)
+            function showSearchSuggestions(query) {
+                const suggestions = [
+                    'Organic Apples',
+                    'Fresh Bananas',
+                    'Whole Milk',
+                    'Salmon Fillet',
+                    'Sourdough Bread',
+                    'Orange Juice'
+                ].filter(item => 
+                    item.toLowerCase().includes(query.toLowerCase())
+                ).slice(0, 4);
+                
+                if (suggestions.length > 0) {
+                    searchSuggestions.innerHTML = suggestions.map(suggestion => 
+                        `<div class="suggestion-item" onclick="selectSuggestion('${suggestion}')">${suggestion}</div>`
+                    ).join('');
+                    searchSuggestions.classList.add('show');
+                } else {
+                    hideSearchSuggestions();
+                }
+            }
+            
+            function hideSearchSuggestions() {
+                searchSuggestions.classList.remove('show');
+            }
+            
+            // Global function for suggestion selection
+            window.selectSuggestion = function(suggestion) {
+                searchInput.value = suggestion;
+                hideSearchSuggestions();
+                searchInput.focus();
+            };
+            
+            // Hide suggestions when clicking outside
+            document.addEventListener('click', function(e) {
+                if (!searchContainer.contains(e.target)) {
+                    hideSearchSuggestions();
+                }
+            });
+            
+            // Keyboard navigation for suggestions
+            searchInput.addEventListener('keydown', function(e) {
+                const suggestions = searchSuggestions.querySelectorAll('.suggestion-item');
+                const activeSuggestion = searchSuggestions.querySelector('.suggestion-item.active');
+                
+                if (e.key === 'ArrowDown') {
+                    e.preventDefault();
+                    if (activeSuggestion) {
+                        activeSuggestion.classList.remove('active');
+                        const next = activeSuggestion.nextElementSibling;
+                        if (next) {
+                            next.classList.add('active');
+                        } else {
+                            suggestions[0]?.classList.add('active');
+                        }
+                    } else {
+                        suggestions[0]?.classList.add('active');
+                    }
+                } else if (e.key === 'ArrowUp') {
+                    e.preventDefault();
+                    if (activeSuggestion) {
+                        activeSuggestion.classList.remove('active');
+                        const prev = activeSuggestion.previousElementSibling;
+                        if (prev) {
+                            prev.classList.add('active');
+                        } else {
+                            suggestions[suggestions.length - 1]?.classList.add('active');
+                        }
+                    } else {
+                        suggestions[suggestions.length - 1]?.classList.add('active');
+                    }
+                } else if (e.key === 'Enter' && activeSuggestion) {
+                    e.preventDefault();
+                    selectSuggestion(activeSuggestion.textContent);
+                } else if (e.key === 'Escape') {
+                    hideSearchSuggestions();
+                }
+            });
+        });
+        
+        // Add CSS animations
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes ripple {
+                to {
+                    transform: scale(4);
+                    opacity: 0;
+                }
+            }
+            
+            .search-focused {
+                filter: brightness(1.1);
+            }
+            
+            .search-typing .search-icon {
+                animation: pulse 1s infinite;
+            }
+            
+            @keyframes pulse {
+                0%, 100% { opacity: 0.8; }
+                50% { opacity: 1; }
+            }
+            
+            .suggestion-item {
+                padding: 12px 20px;
+                cursor: pointer;
+                transition: all 0.2s ease;
+                border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+                color: #333;
+            }
+            
+            .suggestion-item:last-child {
+                border-bottom: none;
+            }
+            
+            .suggestion-item:hover,
+            .suggestion-item.active {
+                background: linear-gradient(135deg, #28a745, #20c997);
+                color: white;
+                transform: translateX(5px);
+            }
+            
+            .suggestion-item:first-child {
+                border-radius: 15px 15px 0 0;
+            }
+            
+            .suggestion-item:last-child {
+                border-radius: 0 0 15px 15px;
+            }
+            
+            .suggestion-item:only-child {
+                border-radius: 15px;
+            }
+        `;
+        document.head.appendChild(style);
+    </script>
     
     <!-- Database Switching Script -->
     <script>
