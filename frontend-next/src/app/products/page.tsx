@@ -197,7 +197,7 @@ export default function ProductsPage() {
   }, [showDatabaseDropdown])
 
   const selectedCategoryName = selectedCategory 
-    ? categories.find(cat => cat.id === selectedCategory)?.name || 'Category'
+    ? categories.find((cat: Category) => cat.id === selectedCategory)?.name || 'Category'
     : 'All Products'
 
   return (
@@ -532,7 +532,18 @@ export default function ProductsPage() {
               <div className="flex items-center justify-between p-6 border-b border-neutral-200">
                 <div>
                   <h2 className="text-2xl font-bold text-neutral-800">Database Query Log</h2>
-                  <p className="text-neutral-600">Current Database: <span className="font-medium text-primary-600">{currentDatabase.toUpperCase()}</span></p>
+                  <div className="flex items-center space-x-4">
+                    <p className="text-neutral-600">Current Database: <span className="font-medium text-primary-600">{currentDatabase.toUpperCase()}</span></p>
+                    <a
+                      href="/data-models"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center space-x-1 text-sm text-blue-600 hover:text-blue-700 font-medium hover:underline"
+                    >
+                      <Database className="w-4 h-4" />
+                      <span>View Data Models</span>
+                    </a>
+                  </div>
                 </div>
                 <button
                   onClick={() => setShowQueryLog(false)}

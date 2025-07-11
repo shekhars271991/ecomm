@@ -249,3 +249,8 @@ Switched to aerospike database
 127.0.0.1 - - [11/Jul/2025 12:32:37] "OPTIONS /api/cart?session_id=session_oshl5tfnimcyg01zr HTTP/1.1" 200 -
 127.0.0.1 - - [11/Jul/2025 12:32:37] "POST /api/cart?session_id=session_oshl5tfnimcyg01zr HTTP/1.1" 200 -
 127.0.0.1 - - [11/Jul/2025 12:32:37] "GET /api/cart?session_id=session_oshl5tfnimcyg01zr HTTP/1.1" 200 -
+127.0.0.1 - - [11/Jul/2025 13:14:08] "GET /api/database-switch?session_id=session_oshl5tfnimcyg01zr HTTP/1.1" 200 -
+127.0.0.1 - - [11/Jul/2025 13:14:08] "GET /api/categories HTTP/1.1" 200 -
+127.0.0.1 - - [11/Jul/2025 13:14:08] "GET /api/products?session_id=session_oshl5tfnimcyg01zr HTTP/1.1" 200 -
+127.0.0.1 - - [11/Jul/2025 13:14:08] "GET /api/cart?session_id=session_oshl5tfnimcyg01zr HTTP/1.1" 200 -
+127.0.0.1 - - [11/Jul/2025 13:14:14] "GET /api/db-logs HTTP/1.1" 200 -
