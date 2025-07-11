@@ -20,10 +20,29 @@ app.config['DEMO_MODE'] = True
 
 db = SQLAlchemy(app)
 api = Api(app)
-CORS(app)
+
+# Configure CORS to allow all content types and methods
+CORS(app, 
+     origins=['http://localhost:3000', 'http://localhost:4000'],
+     methods=['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+     allow_headers=['Content-Type', 'Authorization', 'X-Requested-With'],
+     supports_credentials=True)
 
 # Initialize database manager
 db_manager = UnifiedDatabaseManager()
+
+# Add request hook to ensure proper content type handling
+@app.before_request
+def before_request():
+    # For OPTIONS requests, return immediately
+    if request.method == 'OPTIONS':
+        return
+    
+    # For POST/PUT requests, ensure content type is set
+    if request.method in ['POST', 'PUT'] and request.content_type is None:
+        # If no content type is set but we have data, assume JSON
+        if request.data:
+            request.content_type = 'application/json'
 
 # Demo mode: Track database operations
 class DatabaseTracker:
@@ -84,9 +103,123 @@ class DatabaseTracker:
             db.session.commit()
         except Exception as e:
             db.session.rollback()
+    
+    def log_api_call(self, endpoint, method, status_code, start_time, end_time, session_id=None, database_type='mysql'):
+        if not self.enabled:
+            return
+        
+        duration = (end_time - start_time) * 1000  # Convert to milliseconds
+        
+        # Debug output
+        print(f"🌐 Logging API call: {method} {endpoint} - {status_code} ({duration:.2f}ms)")
+        
+        # Create and save the API log entry
+        log_entry = ApiLog(
+            endpoint=endpoint,
+            method=method,
+            status_code=status_code,
+            time_taken_ms=round(duration, 2),
+            database_type=database_type,
+            session_id=session_id
+        )
+        
+        try:
+            # Ensure we have an active Flask app context
+            from flask import has_app_context
+            if not has_app_context():
+                print("❌ No Flask app context for API logging")
+                return
+                
+            db.session.add(log_entry)
+            db.session.commit()
+            print(f"✅ Successfully logged API call")
+        except Exception as e:
+            # If we can't log to db, just continue - don't break the app
+            db.session.rollback()
+            print(f"❌ Failed to log API call: {e}")
+    
+    def get_recent_api_logs(self):
+        # Get last 20 API logs from database, most recent first
+        try:
+            logs = ApiLog.query.order_by(ApiLog.timestamp.desc()).limit(20).all()
+            return [log.to_dict() for log in logs]
+        except Exception as e:
+            print(f"Failed to get recent API logs: {e}")
+            return []
+    
+    def clear_api_logs(self):
+        try:
+            ApiLog.query.delete()
+            db.session.commit()
+        except Exception as e:
+            db.session.rollback()
+            print(f"Failed to clear API logs: {e}")
 
 # Global tracker instance
 db_tracker = DatabaseTracker()
+
+# API timing decorator
+import functools
+
+def time_api_call(f):
+    @functools.wraps(f)
+    def decorated_function(*args, **kwargs):
+        start_time = time.time()
+        
+        # Get request info
+        endpoint = request.path  # Use the actual path instead of endpoint name
+        method = request.method
+        session_id = request.args.get('session_id')
+        
+        # Only try to get session_id from JSON for POST/PUT requests
+        if method in ['POST', 'PUT'] and request.content_type == 'application/json':
+            try:
+                json_data = request.get_json(silent=True)
+                if json_data and 'session_id' in json_data:
+                    session_id = json_data['session_id']
+            except:
+                pass
+        
+        try:
+            # Execute the original function
+            result = f(*args, **kwargs)
+            
+            # Determine status code
+            if isinstance(result, tuple):
+                status_code = result[1] if len(result) > 1 else 200
+            else:
+                status_code = 200
+                
+        except Exception as e:
+            end_time = time.time()
+            # Log failed API call
+            db_tracker.log_api_call(
+                endpoint=endpoint,
+                method=method,
+                status_code=500,
+                start_time=start_time,
+                end_time=end_time,
+                session_id=session_id,
+                database_type=db_manager.get_current_database()
+            )
+            raise  # Re-raise the exception
+        
+        end_time = time.time()
+        
+        # Log successful API call
+        db_tracker.log_api_call(
+            endpoint=endpoint,
+            method=method,
+            status_code=status_code,
+            start_time=start_time,
+            end_time=end_time,
+            session_id=session_id,
+            database_type=db_manager.get_current_database()
+        )
+        
+        return result
+    
+    return decorated_function
 
 # Wrapper function to track database operations
 def track_db_operation(operation_type, operation_func, *args, **kwargs):
@@ -127,6 +260,15 @@ def create_api_response(data, success=True, message="Success"):
         }
     
     return response
+
+def safe_get_json():
+    """Safely get JSON data from request, handling content type issues"""
+    try:
+        # Try to get JSON data directly
+        return request.get_json(force=True)
+    except Exception as e:
+        # If that fails, return None
+        return None
 
 # -------------------------------
 # DATABASE MODELS
@@ -264,6 +406,29 @@ class DbLog(db.Model):
             'timestamp': self.timestamp.strftime('%H:%M:%S')
         }
 
+class ApiLog(db.Model):
+    __tablename__ = 'api_logs'
+    id = db.Column(db.Integer, primary_key=True)
+    endpoint = db.Column(db.String(200), nullable=False)
+    method = db.Column(db.String(10), nullable=False)
+    status_code = db.Column(db.Integer, nullable=False)
+    time_taken_ms = db.Column(db.Float, nullable=False)
+    database_type = db.Column(db.String(50), nullable=False, default='mysql')
+    session_id = db.Column(db.String(255))
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'endpoint': self.endpoint,
+            'method': self.method,
+            'status_code': self.status_code,
+            'time_taken_ms': self.time_taken_ms,
+            'database_type': self.database_type,
+            'session_id': self.session_id,
+            'timestamp': self.timestamp.strftime('%H:%M:%S')
+        }
+
 class Cart(db.Model):
     __tablename__ = 'cart'
     id = db.Column(db.Integer, primary_key=True)
@@ -353,11 +518,13 @@ class UserResource(Resource):
             return create_api_response({'user': user_data}, True, "Registration successful"), 201
 
 class CategoriesResource(Resource):
+    @time_api_call
     def get(self):
         categories_data = db_manager.get_all_categories()
         return create_api_response(categories_data)
 
 class ProductsResource(Resource):
+    @time_api_call
     def get(self):
         # Get query parameters
         category_id = request.args.get('category')
@@ -385,6 +552,7 @@ class ProductResource(Resource):
         return create_api_response({'product': product_data})
 
 class CartResource(Resource):
+    @time_api_call
     def get(self):
         # Get cart items for current session
         session_id = request.args.get('session_id')
@@ -421,9 +589,10 @@ class CartResource(Resource):
             'total': final_total
         }, True, "Cart retrieved successfully")
     
+    @time_api_call
     def post(self):
         # Add item to cart
-        data = request.get_json()
+        data = safe_get_json()
         
         if not data or 'session_id' not in data or 'product_id' not in data:
             return create_api_response(None, False, "Session ID and product ID are required"), 400
@@ -442,6 +611,7 @@ class CartResource(Resource):
         else:
             return create_api_response(None, False, result['message']), 400
     
+    @time_api_call
     def delete(self):
         # Clear cart for session
         session_id = request.args.get('session_id')
@@ -483,7 +653,7 @@ class CartItemResource(Resource):
     
     def put(self, item_id):
         # Update cart item quantity
-        data = request.get_json()
+        data = safe_get_json()
         
         if not data or 'quantity' not in data:
             return create_api_response(None, False, "Quantity is required"), 400
@@ -676,8 +846,61 @@ class DbLogsResource(Resource):
             db.session.rollback()
             return create_api_response(None, False, f"Failed to clear logs: {str(e)}"), 500
 
+# API Logs endpoint for widget
+class ApiLogsResource(Resource):
+    def get(self):
+        try:
+            # Get database type filter from query parameters
+            database_type = request.args.get('database_type')
+            
+            # Start with base query
+            query = ApiLog.query
+            
+            # Apply database type filter if provided
+            if database_type and database_type in ['mysql', 'aerospike']:
+                query = query.filter_by(database_type=database_type)
+            
+            # Get logs ordered by timestamp desc
+            logs = query.order_by(ApiLog.timestamp.desc()).all()
+            logs_data = [log.to_dict() for log in logs]
+            
+            return create_api_response({
+                'logs': logs_data,
+                'count': len(logs_data),
+                'database_type_filter': database_type
+            })
+        except Exception as e:
+            return create_api_response(None, False, f"Failed to get API logs: {str(e)}"), 500
+    
+    def delete(self):
+        try:
+            # Get database type filter from query parameters
+            database_type = request.args.get('database_type')
+            
+            # Start with base query
+            query = ApiLog.query
+            
+            # Apply database type filter if provided
+            if database_type and database_type in ['mysql', 'aerospike']:
+                query = query.filter_by(database_type=database_type)
+            
+            # Delete filtered logs
+            deleted_count = query.delete()
+            db.session.commit()
+            
+            filter_msg = f" for {database_type} database" if database_type else ""
+            return create_api_response(
+                {'deleted_count': deleted_count}, 
+                True, 
+                f"API logs cleared{filter_msg}"
+            )
+        except Exception as e:
+            db.session.rollback()
+            return create_api_response(None, False, f"Failed to clear API logs: {str(e)}"), 500
+
 # Database switching endpoint
 class DatabaseSwitchResource(Resource):
+    @time_api_call
     def get(self):
         """Get current database type"""
         current_db = db_manager.get_current_database()
@@ -686,6 +909,7 @@ class DatabaseSwitchResource(Resource):
             'available_databases': ['mysql', 'aerospike']
         })
     
+    @time_api_call
     def post(self):
         """Switch database type"""
         data = request.get_json()
@@ -725,6 +949,7 @@ api.add_resource(CartResource, '/api/cart')
 api.add_resource(CartItemResource, '/api/cart/<int:item_id>')
 api.add_resource(DebugResource, '/api/debug')
 api.add_resource(DbLogsResource, '/api/db-logs')
+api.add_resource(ApiLogsResource, '/api/api-logs')
 api.add_resource(DatabaseSwitchResource, '/api/database-switch')
 
 # -------------------------------
@@ -751,6 +976,13 @@ def initialize_database(force_refresh=False):
             except Exception as e:
                 db.session.rollback()
                 print(f"⚠️  Failed to add database_type column: {e}")
+        
+        # Check if api_logs table exists, if not it will be created by db.create_all()
+        try:
+            db.session.execute(db.text("SELECT COUNT(*) FROM api_logs"))
+            print("✅ API logs table exists")
+        except Exception:
+            print("ℹ️  API logs table will be created")
         
         # Initialize database manager
         models = {

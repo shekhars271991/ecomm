@@ -24,6 +24,8 @@ export default function ProductsPage() {
   const [currentDatabase, setCurrentDatabase] = useState<string>('mysql')
   const [showDatabaseDropdown, setShowDatabaseDropdown] = useState(false)
   const [showQueryLog, setShowQueryLog] = useState(false)
+  const [activeLogTab, setActiveLogTab] = useState<'db' | 'api'>('db')
+  const [apiLogs, setApiLogs] = useState<any[]>([])
   const [queryLog, setQueryLog] = useState<any[]>([])
   const [queryFilter, setQueryFilter] = useState<string>('all')
   const [showCart, setShowCart] = useState(false)
@@ -168,10 +170,45 @@ export default function ProductsPage() {
     }
   }
 
+  const fetchApiLogs = async () => {
+    try {
+      const filterParam = queryFilter !== 'all' ? `?database_type=${queryFilter}` : ''
+      const response = await fetch(`http://localhost:5001/api/api-logs${filterParam}`)
+      const data = await response.json()
+      
+      if (data.success && data.data) {
+        setApiLogs(data.data.logs || [])
+      }
+    } catch (error) {
+      console.error('Failed to fetch API logs:', error)
+    }
+  }
+
+  const clearApiLogs = async () => {
+    try {
+      const filterParam = queryFilter !== 'all' ? `?database_type=${queryFilter}` : ''
+      const response = await fetch(`http://localhost:5001/api/api-logs${filterParam}`, {
+        method: 'DELETE'
+      })
+      const data = await response.json()
+      
+      if (data.success) {
+        setApiLogs([])
+        toast.success(data.message || 'API logs cleared successfully')
+      } else {
+        toast.error(data.message || 'Failed to clear API logs')
+      }
+    } catch (error) {
+      console.error('Failed to clear API logs:', error)
+      toast.error('Failed to clear API logs')
+    }
+  }
+
   const calculateAverageQueryTime = () => {
-    if (queryLog.length === 0) return 0
-    const total = queryLog.reduce((sum, query) => sum + (query.time_taken_ms || 0), 0)
-    return Math.round(total / queryLog.length * 100) / 100
+    const logs = activeLogTab === 'db' ? filteredQueries : filteredApiLogs
+    if (logs.length === 0) return 0
+    const total = logs.reduce((sum: number, query: any) => sum + (query.time_taken_ms || 0), 0)
+    return Math.round(total / logs.length * 100) / 100
   }
 
   const filteredQueries = queryLog.filter(query => {
@@ -179,9 +216,16 @@ export default function ProductsPage() {
     return query.database_type === queryFilter
   })
 
+  // Filter API logs based on selected filter
+  const filteredApiLogs = apiLogs.filter(log => {
+    if (queryFilter === 'all') return true
+    return log.database_type === queryFilter
+  })
+
   useEffect(() => {
     if (showQueryLog) {
       fetchQueryLogs()
+      fetchApiLogs()
     }
   }, [showQueryLog, queryFilter])
 
@@ -204,10 +248,10 @@ export default function ProductsPage() {
     <div className="min-h-screen bg-gradient-to-br from-neutral-50 to-neutral-100">
       {/* Header */}
       <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-neutral-200">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            {/* Logo */}
-            <div className="flex items-center space-x-4">
+        <div className="container mx-auto px-4 py-3">
+          <div className="flex items-center justify-between gap-4">
+            {/* Left Side - Logo & Back */}
+            <div className="flex items-center space-x-4 flex-shrink-0">
               <button
                 onClick={() => router.push('/')}
                 className="flex items-center space-x-2 hover:opacity-75 transition-opacity"
@@ -216,26 +260,40 @@ export default function ProductsPage() {
                 <div className="w-10 h-10 bg-primary-500 rounded-xl flex items-center justify-center">
                   <ShoppingCart className="w-6 h-6 text-white" />
                 </div>
-                <div>
+                <div className="hidden sm:block">
                   <h1 className="text-xl font-bold text-neutral-800">QuickGrocery</h1>
                   <p className="text-xs text-neutral-500">Delivery in 10 minutes</p>
                 </div>
               </button>
             </div>
 
-            {/* Right side actions */}
-            <div className="flex items-center space-x-4">
-              {/* Database Selector */}
+            {/* Center - Search Bar */}
+            <div className="flex-1 max-w-lg mx-4">
               <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-neutral-400 w-4 h-4" />
+                <input
+                  type="text"
+                  placeholder="Search for products..."
+                  className="w-full pl-10 pr-4 py-2.5 bg-neutral-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:bg-white transition-all duration-200 text-sm"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
+              </div>
+            </div>
+
+            {/* Right Side - Actions */}
+            <div className="flex items-center space-x-2">
+              {/* Database Selector */}
+              <div className="relative hidden lg:block">
                 <button
-                  className="flex items-center space-x-2 bg-neutral-100 hover:bg-neutral-200 px-3 py-2 rounded-lg text-sm font-medium transition-colors"
+                  className="flex items-center space-x-1 bg-neutral-100 hover:bg-neutral-200 px-2 py-1.5 rounded-lg text-xs font-medium transition-colors"
                   onClick={(e) => {
                     e.stopPropagation()
                     setShowDatabaseDropdown(!showDatabaseDropdown)
                   }}
                 >
-                  <Database className="w-4 h-4" />
-                  <span className="hidden sm:inline">{currentDatabase.toUpperCase()}</span>
+                  <Database className="w-3 h-3" />
+                  <span>{currentDatabase.toUpperCase()}</span>
                   <ChevronDown className="w-3 h-3" />
                 </button>
                 
@@ -284,58 +342,47 @@ export default function ProductsPage() {
                 )}
               </div>
 
-              {/* Query Log Button */}
+              {/* Logs Button */}
               <button
                 onClick={() => setShowQueryLog(!showQueryLog)}
-                className="flex items-center space-x-2 text-neutral-600 hover:text-primary-500 text-sm font-medium"
-                title="View Database Queries"
+                className="relative flex items-center space-x-1 text-neutral-600 hover:text-primary-500 text-sm font-medium hover:bg-neutral-50 px-2 py-1.5 rounded-lg transition-colors"
+                title="View Logs"
               >
-                <span className="hidden sm:inline">DB Logs</span>
-                <span className="text-xs bg-neutral-200 text-neutral-700 px-2 py-1 rounded-full">
-                  {queryLog.length}
+                <span className="hidden sm:inline text-xs">Logs</span>
+                <span className="text-xs bg-neutral-200 text-neutral-700 px-1.5 py-0.5 rounded-full min-w-[1.5rem] text-center">
+                  {queryLog.length + apiLogs.length}
                 </span>
               </button>
 
-              <button className="hidden md:flex items-center space-x-2 text-neutral-600 hover:text-primary-500">
-                <User className="w-5 h-5" />
-                <span>Login</span>
+              {/* Login */}
+              <button className="hidden md:flex items-center space-x-1 text-neutral-600 hover:text-primary-500 hover:bg-neutral-50 px-2 py-1.5 rounded-lg transition-colors">
+                <User className="w-4 h-4" />
+                <span className="text-sm">Login</span>
               </button>
               
+              {/* Cart */}
               <button 
                 className="relative" 
                 onClick={() => setShowCart(true)}
                 title="View Cart"
               >
-                <div className="w-10 h-10 bg-secondary-500 rounded-full flex items-center justify-center hover:bg-secondary-600 transition-colors">
-                  <ShoppingCart className="w-5 h-5 text-white" />
+                <div className="w-9 h-9 bg-secondary-500 rounded-lg flex items-center justify-center hover:bg-secondary-600 transition-colors">
+                  <ShoppingCart className="w-4 h-4 text-white" />
                 </div>
                 {cartItemCount > 0 && (
-                  <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center">
                     {cartItemCount}
                   </span>
                 )}
               </button>
 
+              {/* Mobile Menu */}
               <button 
-                className="md:hidden"
+                className="md:hidden w-9 h-9 flex items-center justify-center hover:bg-neutral-100 rounded-lg transition-colors"
                 onClick={() => setIsMenuOpen(!isMenuOpen)}
               >
-                {isMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+                {isMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
               </button>
-            </div>
-          </div>
-
-          {/* Search Bar */}
-          <div className="mt-4 relative">
-            <div className="relative">
-              <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-neutral-400 w-5 h-5" />
-              <input
-                type="text"
-                placeholder="Search for products..."
-                className="w-full pl-12 pr-4 py-3 bg-neutral-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 focus:bg-white transition-all duration-200"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
             </div>
           </div>
         </div>
@@ -531,7 +578,7 @@ export default function ProductsPage() {
             >
               <div className="flex items-center justify-between p-6 border-b border-neutral-200">
                 <div>
-                  <h2 className="text-2xl font-bold text-neutral-800">Database Query Log</h2>
+                  <h2 className="text-2xl font-bold text-neutral-800">Logs</h2>
                   <div className="flex items-center space-x-4">
                     <p className="text-neutral-600">Current Database: <span className="font-medium text-primary-600">{currentDatabase.toUpperCase()}</span></p>
                     <a
@@ -553,22 +600,48 @@ export default function ProductsPage() {
                 </button>
               </div>
               
+              {/* Tab Navigation */}
+              <div className="flex border-b border-neutral-200">
+                <button
+                  onClick={() => setActiveLogTab('db')}
+                  className={`flex-1 px-6 py-3 text-sm font-medium transition-colors ${
+                    activeLogTab === 'db'
+                      ? 'text-primary-600 border-b-2 border-primary-600 bg-primary-50'
+                      : 'text-neutral-600 hover:text-neutral-800'
+                  }`}
+                >
+                  DB Logs ({filteredQueries.length})
+                </button>
+                <button
+                  onClick={() => setActiveLogTab('api')}
+                  className={`flex-1 px-6 py-3 text-sm font-medium transition-colors ${
+                    activeLogTab === 'api'
+                      ? 'text-primary-600 border-b-2 border-primary-600 bg-primary-50'
+                      : 'text-neutral-600 hover:text-neutral-800'
+                  }`}
+                >
+                  API Logs ({filteredApiLogs.length})
+                </button>
+              </div>
+              
               <div className="p-6 overflow-y-auto max-h-[60vh]">
                 <div className="mb-4 space-y-3">
                   <div className="flex justify-between items-center">
-                    <h3 className="text-lg font-semibold text-neutral-800">Query Log</h3>
+                    <h3 className="text-lg font-semibold text-neutral-800">
+                      {activeLogTab === 'db' ? 'Database Queries' : 'API Calls'}
+                    </h3>
                     <div className="flex space-x-2">
                       <button
-                        onClick={fetchQueryLogs}
+                        onClick={activeLogTab === 'db' ? fetchQueryLogs : fetchApiLogs}
                         className="px-3 py-1 rounded-lg text-sm font-medium text-blue-600 hover:bg-blue-50 hover:text-blue-700 transition-colors"
                       >
                         Refresh
                       </button>
                       <button
-                        onClick={clearQueryLogs}
+                        onClick={activeLogTab === 'db' ? clearQueryLogs : clearApiLogs}
                         className="px-3 py-1 rounded-lg text-sm font-medium text-red-600 hover:bg-red-50 hover:text-red-700 transition-colors"
                       >
-                        Clear Logs
+                        Clear
                       </button>
                     </div>
                   </div>
@@ -603,7 +676,9 @@ export default function ProductsPage() {
                     
                     <div className="flex items-center space-x-4 text-sm text-neutral-600">
                       <span>
-                        Total: <span className="font-medium text-neutral-800">{filteredQueries.length}</span>
+                        Total: <span className="font-medium text-neutral-800">
+                          {activeLogTab === 'db' ? filteredQueries.length : filteredApiLogs.length}
+                        </span>
                       </span>
                       <span>
                         Avg: <span className="font-medium text-neutral-800">{calculateAverageQueryTime()}ms</span>
@@ -613,54 +688,121 @@ export default function ProductsPage() {
                 </div>
                 
                 <div className="space-y-3">
-                  {filteredQueries.length > 0 ? (
-                    filteredQueries.map((query, index) => (
-                      <div key={index} className="bg-neutral-50 border border-neutral-200 rounded-xl p-4">
-                        <div className="flex items-start justify-between mb-2">
-                          <div className="flex items-center space-x-2">
-                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                              query.database_type === 'mysql' 
-                                ? 'bg-blue-100 text-blue-700'
-                                : 'bg-purple-100 text-purple-700'
+                  {activeLogTab === 'db' ? (
+                    filteredQueries.length > 0 ? (
+                      filteredQueries.map((query, index) => (
+                        <div key={index} className="bg-neutral-50 border border-neutral-200 rounded-xl p-4">
+                          <div className="flex items-start justify-between mb-2">
+                            <div className="flex items-center space-x-2">
+                              <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                query.database_type === 'mysql' 
+                                  ? 'bg-blue-100 text-blue-700'
+                                  : 'bg-purple-100 text-purple-700'
+                              }`}>
+                                {query.database_type?.toUpperCase()}
+                              </span>
+                              <span className="text-xs text-neutral-500">ID: {query.id}</span>
+                            </div>
+                            <div className="text-right">
+                              <div className="text-sm font-medium text-neutral-800">{query.time_taken_ms}ms</div>
+                              <div className="text-xs text-neutral-500">{query.timestamp}</div>
+                            </div>
+                          </div>
+                          
+                          <div className="bg-neutral-800 text-neutral-100 p-3 rounded-lg font-mono text-sm overflow-x-auto">
+                            {query.operation}
+                          </div>
+                          
+                          <div className="flex items-center justify-between mt-2 text-xs text-neutral-600">
+                            <span>Response Count: <span className="font-medium">{query.response_count}</span></span>
+                            <span className={`font-medium ${
+                              query.time_taken_ms < 10 ? 'text-green-600' : 
+                              query.time_taken_ms < 50 ? 'text-yellow-600' : 'text-red-600'
                             }`}>
-                              {query.database_type?.toUpperCase()}
+                              {query.time_taken_ms < 10 ? 'Fast' : query.time_taken_ms < 50 ? 'Moderate' : 'Slow'}
                             </span>
-                            <span className="text-xs text-neutral-500">ID: {query.id}</span>
-                          </div>
-                          <div className="text-right">
-                            <div className="text-sm font-medium text-neutral-800">{query.time_taken_ms}ms</div>
-                            <div className="text-xs text-neutral-500">{query.timestamp}</div>
                           </div>
                         </div>
-                        
-                        <div className="bg-neutral-800 text-neutral-100 p-3 rounded-lg font-mono text-sm overflow-x-auto">
-                          {query.operation}
-                        </div>
-                        
-                        <div className="flex items-center justify-between mt-2 text-xs text-neutral-600">
-                          <span>Response Count: <span className="font-medium">{query.response_count}</span></span>
-                          <span className={`font-medium ${
-                            query.time_taken_ms < 10 ? 'text-green-600' : 
-                            query.time_taken_ms < 50 ? 'text-yellow-600' : 'text-red-600'
-                          }`}>
-                            {query.time_taken_ms < 10 ? 'Fast' : query.time_taken_ms < 50 ? 'Moderate' : 'Slow'}
-                          </span>
-                        </div>
+                      ))
+                    ) : (
+                      <div className="text-center py-12">
+                        <Database className="w-16 h-16 text-neutral-300 mx-auto mb-4" />
+                        <h3 className="text-lg font-semibold text-neutral-600 mb-2">
+                          {queryFilter === 'all' ? 'No Database Queries Yet' : `No ${queryFilter.toUpperCase()} Database Queries`}
+                        </h3>
+                        <p className="text-neutral-500">
+                          {queryFilter === 'all' 
+                            ? 'Database queries will appear here as you interact with the app.' 
+                            : `Switch to "${queryFilter === 'mysql' ? 'Aerospike' : 'MySQL'}" database or clear filters to see more queries.`
+                          }
+                        </p>
                       </div>
-                    ))
+                    )
                   ) : (
-                    <div className="text-center py-12">
-                      <Database className="w-16 h-16 text-neutral-300 mx-auto mb-4" />
-                      <h3 className="text-lg font-semibold text-neutral-600 mb-2">
-                        {queryFilter === 'all' ? 'No Queries Yet' : `No ${queryFilter.toUpperCase()} Queries`}
-                      </h3>
-                      <p className="text-neutral-500">
-                        {queryFilter === 'all' 
-                          ? 'Database queries will appear here as you interact with the app.' 
-                          : `Switch to "${queryFilter === 'mysql' ? 'Aerospike' : 'MySQL'}" database or clear filters to see more queries.`
-                        }
-                      </p>
-                    </div>
+                    filteredApiLogs.length > 0 ? (
+                      filteredApiLogs.map((log, index) => (
+                        <div key={index} className="bg-neutral-50 border border-neutral-200 rounded-xl p-4">
+                          <div className="flex items-start justify-between mb-2">
+                            <div className="flex items-center space-x-2">
+                              <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                log.method === 'GET' ? 'bg-green-100 text-green-700' :
+                                log.method === 'POST' ? 'bg-blue-100 text-blue-700' :
+                                log.method === 'PUT' ? 'bg-yellow-100 text-yellow-700' :
+                                log.method === 'DELETE' ? 'bg-red-100 text-red-700' :
+                                'bg-gray-100 text-gray-700'
+                              }`}>
+                                {log.method}
+                              </span>
+                              <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                log.status_code >= 200 && log.status_code < 300 ? 'bg-green-100 text-green-700' :
+                                log.status_code >= 400 ? 'bg-red-100 text-red-700' :
+                                'bg-gray-100 text-gray-700'
+                              }`}>
+                                {log.status_code}
+                              </span>
+                              <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                log.database_type === 'mysql' 
+                                  ? 'bg-blue-100 text-blue-700'
+                                  : 'bg-purple-100 text-purple-700'
+                              }`}>
+                                {log.database_type?.toUpperCase()}
+                              </span>
+                            </div>
+                            <div className="text-right">
+                              <div className="text-sm font-medium text-neutral-800">{log.time_taken_ms}ms</div>
+                              <div className="text-xs text-neutral-500">{log.timestamp}</div>
+                            </div>
+                          </div>
+                          
+                          <div className="bg-neutral-800 text-neutral-100 p-3 rounded-lg font-mono text-sm overflow-x-auto">
+                            {log.endpoint}
+                          </div>
+                          
+                          <div className="flex items-center justify-between mt-2 text-xs text-neutral-600">
+                            <span>Status: <span className="font-medium">{log.status_code}</span></span>
+                            <span className={`font-medium ${
+                              log.time_taken_ms < 50 ? 'text-green-600' : 
+                              log.time_taken_ms < 200 ? 'text-yellow-600' : 'text-red-600'
+                            }`}>
+                              {log.time_taken_ms < 50 ? 'Fast' : log.time_taken_ms < 200 ? 'Moderate' : 'Slow'}
+                            </span>
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="text-center py-12">
+                        <Database className="w-16 h-16 text-neutral-300 mx-auto mb-4" />
+                        <h3 className="text-lg font-semibold text-neutral-600 mb-2">
+                          {queryFilter === 'all' ? 'No API Calls Yet' : `No ${queryFilter.toUpperCase()} API Calls`}
+                        </h3>
+                        <p className="text-neutral-500">
+                          {queryFilter === 'all' 
+                            ? 'API calls will appear here as you interact with the app.' 
+                            : `Switch to "${queryFilter === 'mysql' ? 'Aerospike' : 'MySQL'}" database or clear filters to see more API calls.`
+                          }
+                        </p>
+                      </div>
+                    )
                   )}
                 </div>
               </div>

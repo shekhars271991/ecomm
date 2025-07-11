@@ -1,4 +1,5 @@
 ✅ Database tables created/verified successfully
+✅ API logs table exists
 MySQL Manager initialized successfully
 Aerospike Manager connected successfully!
 🔍 AerospikeManager.log_query called: AEROSPIKE INSERT
@@ -19,77 +20,58 @@ Unified Database Manager initialized successfully
  * Restarting with stat
  * Debugger is active!
  * Debugger PIN: 318-484-797
-127.0.0.1 - - [11/Jul/2025 12:03:56] "GET /api/categories HTTP/1.1" 200 -
-127.0.0.1 - - [11/Jul/2025 12:05:24] "GET /api/cart?session_id=session_oshl5tfnimcyg01zr HTTP/1.1" 200 -
-127.0.0.1 - - [11/Jul/2025 12:05:24] "GET /api/categories?session_id=session_oshl5tfnimcyg01zr HTTP/1.1" 200 -
-127.0.0.1 - - [11/Jul/2025 12:05:26] "GET /api/products?session_id=session_oshl5tfnimcyg01zr HTTP/1.1" 200 -
-127.0.0.1 - - [11/Jul/2025 12:06:52] "GET /api/categories HTTP/1.1" 200 -
-127.0.0.1 - - [11/Jul/2025 12:08:21] "GET /api/products?category=2&session_id=session_oshl5tfnimcyg01zr HTTP/1.1" 200 -
-127.0.0.1 - - [11/Jul/2025 12:08:39] "OPTIONS /api/cart?session_id=session_oshl5tfnimcyg01zr HTTP/1.1" 200 -
-127.0.0.1 - - [11/Jul/2025 12:08:39] "[31m[1mPOST /api/cart?session_id=session_oshl5tfnimcyg01zr HTTP/1.1[0m" 400 -
-127.0.0.1 - - [11/Jul/2025 12:09:24] "GET /api/database-switch?session_id=session_oshl5tfnimcyg01zr HTTP/1.1" 200 -
-127.0.0.1 - - [11/Jul/2025 12:10:17] "OPTIONS /api/database-switch?session_id=session_oshl5tfnimcyg01zr HTTP/1.1" 200 -
-127.0.0.1 - - [11/Jul/2025 12:10:17] "POST /api/database-switch?session_id=session_oshl5tfnimcyg01zr HTTP/1.1" 200 -
-127.0.0.1 - - [11/Jul/2025 12:10:17] "GET /api/database-switch?session_id=session_oshl5tfnimcyg01zr HTTP/1.1" 200 -
-127.0.0.1 - - [11/Jul/2025 12:10:18] "GET /api/cart?session_id=session_oshl5tfnimcyg01zr HTTP/1.1" 200 -
-127.0.0.1 - - [11/Jul/2025 12:10:18] "GET /api/categories HTTP/1.1" 200 -
-127.0.0.1 - - [11/Jul/2025 12:10:18] "GET /api/products?session_id=session_oshl5tfnimcyg01zr HTTP/1.1" 200 -
-127.0.0.1 - - [11/Jul/2025 12:10:32] "OPTIONS /api/database-switch?session_id=session_oshl5tfnimcyg01zr HTTP/1.1" 200 -
-127.0.0.1 - - [11/Jul/2025 12:10:32] "POST /api/database-switch?session_id=session_oshl5tfnimcyg01zr HTTP/1.1" 200 -
-127.0.0.1 - - [11/Jul/2025 12:10:32] "GET /api/database-switch?session_id=session_oshl5tfnimcyg01zr HTTP/1.1" 200 -
-127.0.0.1 - - [11/Jul/2025 12:10:32] "GET /api/cart?session_id=session_oshl5tfnimcyg01zr HTTP/1.1" 200 -
-127.0.0.1 - - [11/Jul/2025 12:10:32] "GET /api/categories HTTP/1.1" 200 -
-127.0.0.1 - - [11/Jul/2025 12:10:33] "GET /api/products?session_id=session_oshl5tfnimcyg01zr HTTP/1.1" 200 -
-127.0.0.1 - - [11/Jul/2025 12:12:56] "GET /api/products?category=10&session_id=session_oshl5tfnimcyg01zr HTTP/1.1" 200 -
-127.0.0.1 - - [11/Jul/2025 12:14:24] "GET /api/database-switch?session_id=session_oshl5tfnimcyg01zr HTTP/1.1" 200 -
-127.0.0.1 - - [11/Jul/2025 12:14:24] "GET /api/cart?session_id=session_oshl5tfnimcyg01zr HTTP/1.1" 200 -
-127.0.0.1 - - [11/Jul/2025 12:14:24] "GET /api/categories HTTP/1.1" 200 -
-127.0.0.1 - - [11/Jul/2025 12:14:26] "GET /api/products?session_id=session_oshl5tfnimcyg01zr HTTP/1.1" 200 -
-127.0.0.1 - - [11/Jul/2025 12:14:40] "OPTIONS /api/database-switch?session_id=session_oshl5tfnimcyg01zr HTTP/1.1" 200 -
-127.0.0.1 - - [11/Jul/2025 12:14:40] "POST /api/database-switch?session_id=session_oshl5tfnimcyg01zr HTTP/1.1" 200 -
-127.0.0.1 - - [11/Jul/2025 12:14:41] "GET /api/database-switch?session_id=session_oshl5tfnimcyg01zr HTTP/1.1" 200 -
-127.0.0.1 - - [11/Jul/2025 12:14:41] "GET /api/cart?session_id=session_oshl5tfnimcyg01zr HTTP/1.1" 200 -
-127.0.0.1 - - [11/Jul/2025 12:14:41] "GET /api/categories HTTP/1.1" 200 -
-127.0.0.1 - - [11/Jul/2025 12:14:41] "GET /api/products?session_id=session_oshl5tfnimcyg01zr HTTP/1.1" 200 -
-127.0.0.1 - - [11/Jul/2025 12:14:58] "GET /api/products?category=4&session_id=session_oshl5tfnimcyg01zr HTTP/1.1" 200 -
-127.0.0.1 - - [11/Jul/2025 12:15:03] "OPTIONS /api/cart?session_id=session_oshl5tfnimcyg01zr HTTP/1.1" 200 -
-127.0.0.1 - - [11/Jul/2025 12:15:03] "[31m[1mPOST /api/cart?session_id=session_oshl5tfnimcyg01zr HTTP/1.1[0m" 400 -
-127.0.0.1 - - [11/Jul/2025 12:18:53] "GET /api/db-logs HTTP/1.1" 200 -
-127.0.0.1 - - [11/Jul/2025 12:18:54] "GET /api/db-logs HTTP/1.1" 200 -
-127.0.0.1 - - [11/Jul/2025 12:18:57] "GET /api/db-logs?database_type=mysql HTTP/1.1" 200 -
-127.0.0.1 - - [11/Jul/2025 12:18:58] "GET /api/db-logs?database_type=aerospike HTTP/1.1" 200 -
-127.0.0.1 - - [11/Jul/2025 12:19:00] "OPTIONS /api/db-logs?database_type=aerospike HTTP/1.1" 200 -
-127.0.0.1 - - [11/Jul/2025 12:19:00] "DELETE /api/db-logs?database_type=aerospike HTTP/1.1" 200 -
-127.0.0.1 - - [11/Jul/2025 12:19:03] "GET /api/db-logs?database_type=mysql HTTP/1.1" 200 -
-127.0.0.1 - - [11/Jul/2025 12:19:05] "OPTIONS /api/db-logs?database_type=mysql HTTP/1.1" 200 -
-127.0.0.1 - - [11/Jul/2025 12:19:05] "DELETE /api/db-logs?database_type=mysql HTTP/1.1" 200 -
-127.0.0.1 - - [11/Jul/2025 12:19:06] "GET /api/db-logs HTTP/1.1" 200 -
-127.0.0.1 - - [11/Jul/2025 12:19:52] "OPTIONS /api/cart?session_id=session_oshl5tfnimcyg01zr HTTP/1.1" 200 -
-127.0.0.1 - - [11/Jul/2025 12:19:52] "[31m[1mPOST /api/cart?session_id=session_oshl5tfnimcyg01zr HTTP/1.1[0m" 400 -
-127.0.0.1 - - [11/Jul/2025 12:20:43] "GET /api/products?category=2&session_id=session_oshl5tfnimcyg01zr HTTP/1.1" 200 -
-127.0.0.1 - - [11/Jul/2025 12:20:45] "GET /api/products?category=15&session_id=session_oshl5tfnimcyg01zr HTTP/1.1" 200 -
-127.0.0.1 - - [11/Jul/2025 12:20:58] "OPTIONS /api/database-switch?session_id=session_oshl5tfnimcyg01zr HTTP/1.1" 200 -
-127.0.0.1 - - [11/Jul/2025 12:20:58] "POST /api/database-switch?session_id=session_oshl5tfnimcyg01zr HTTP/1.1" 200 -
-127.0.0.1 - - [11/Jul/2025 12:20:59] "GET /api/database-switch?session_id=session_oshl5tfnimcyg01zr HTTP/1.1" 200 -
-127.0.0.1 - - [11/Jul/2025 12:20:59] "GET /api/cart?session_id=session_oshl5tfnimcyg01zr HTTP/1.1" 200 -
-127.0.0.1 - - [11/Jul/2025 12:20:59] "GET /api/categories HTTP/1.1" 200 -
-127.0.0.1 - - [11/Jul/2025 12:20:59] "GET /api/products?session_id=session_oshl5tfnimcyg01zr HTTP/1.1" 200 -
-127.0.0.1 - - [11/Jul/2025 12:21:00] "GET /api/db-logs HTTP/1.1" 200 -
-127.0.0.1 - - [11/Jul/2025 12:21:03] "GET /api/db-logs?database_type=aerospike HTTP/1.1" 200 -
-127.0.0.1 - - [11/Jul/2025 12:22:11] "GET /api/database-switch?session_id=session_oshl5tfnimcyg01zr HTTP/1.1" 200 -
-127.0.0.1 - - [11/Jul/2025 12:22:11] "GET /api/cart?session_id=session_oshl5tfnimcyg01zr HTTP/1.1" 200 -
-127.0.0.1 - - [11/Jul/2025 12:22:11] "GET /api/categories HTTP/1.1" 200 -
-127.0.0.1 - - [11/Jul/2025 12:22:11] "GET /api/products?session_id=session_oshl5tfnimcyg01zr HTTP/1.1" 200 -
-127.0.0.1 - - [11/Jul/2025 12:22:16] "OPTIONS /api/cart?session_id=session_oshl5tfnimcyg01zr HTTP/1.1" 200 -
-127.0.0.1 - - [11/Jul/2025 12:22:16] "POST /api/cart?session_id=session_oshl5tfnimcyg01zr HTTP/1.1" 200 -
-127.0.0.1 - - [11/Jul/2025 12:22:16] "GET /api/cart?session_id=session_oshl5tfnimcyg01zr HTTP/1.1" 200 -
-127.0.0.1 - - [11/Jul/2025 12:24:57] "GET /api/database-switch?session_id=session_oshl5tfnimcyg01zr HTTP/1.1" 200 -
-127.0.0.1 - - [11/Jul/2025 12:24:57] "GET /api/categories HTTP/1.1" 200 -
-127.0.0.1 - - [11/Jul/2025 12:24:57] "GET /api/cart?session_id=session_oshl5tfnimcyg01zr HTTP/1.1" 200 -
-127.0.0.1 - - [11/Jul/2025 12:24:57] "GET /api/products?session_id=session_oshl5tfnimcyg01zr HTTP/1.1" 200 -
-127.0.0.1 - - [11/Jul/2025 12:25:11] "GET /api/products?category=12&session_id=session_oshl5tfnimcyg01zr HTTP/1.1" 200 -
-127.0.0.1 - - [11/Jul/2025 12:31:29] "GET /api/database-switch?session_id=session_oshl5tfnimcyg01zr HTTP/1.1" 200 -
+127.0.0.1 - - [11/Jul/2025 15:57:04] "GET /api/categories HTTP/1.1" 200 -
+127.0.0.1 - - [11/Jul/2025 15:57:17] "GET /api/categories?session_id=test_session HTTP/1.1" 200 -
+127.0.0.1 - - [11/Jul/2025 15:57:25] "GET /api/api-logs HTTP/1.1" 200 -
+127.0.0.1 - - [11/Jul/2025 15:57:31] "GET /api/api-logs HTTP/1.1" 200 -
+127.0.0.1 - - [11/Jul/2025 15:57:37] "GET /api/api-logs HTTP/1.1" 200 -
+127.0.0.1 - - [11/Jul/2025 15:57:42] "GET /api/database-switch?session_id=session_oshl5tfnimcyg01zr HTTP/1.1" 200 -
+127.0.0.1 - - [11/Jul/2025 15:57:42] "GET /api/cart?session_id=session_oshl5tfnimcyg01zr HTTP/1.1" 200 -
+127.0.0.1 - - [11/Jul/2025 15:57:42] "GET /api/categories HTTP/1.1" 200 -
+127.0.0.1 - - [11/Jul/2025 15:57:43] "GET /api/api-logs HTTP/1.1" 200 -
+127.0.0.1 - - [11/Jul/2025 15:57:43] "GET /api/db-logs HTTP/1.1" 200 -
+127.0.0.1 - - [11/Jul/2025 15:57:44] "GET /api/products?session_id=session_oshl5tfnimcyg01zr HTTP/1.1" 200 -
+127.0.0.1 - - [11/Jul/2025 15:58:22] "GET /api/api-logs HTTP/1.1" 200 -
+127.0.0.1 - - [11/Jul/2025 15:58:22] "GET /api/db-logs HTTP/1.1" 200 -
+127.0.0.1 - - [11/Jul/2025 15:58:24] "OPTIONS /api/api-logs HTTP/1.1" 200 -
+127.0.0.1 - - [11/Jul/2025 15:58:24] "DELETE /api/api-logs HTTP/1.1" 200 -
+127.0.0.1 - - [11/Jul/2025 15:58:26] "OPTIONS /api/db-logs HTTP/1.1" 200 -
+127.0.0.1 - - [11/Jul/2025 15:58:26] "DELETE /api/db-logs HTTP/1.1" 200 -
+127.0.0.1 - - [11/Jul/2025 15:58:30] "OPTIONS /api/database-switch?session_id=session_oshl5tfnimcyg01zr HTTP/1.1" 200 -
+127.0.0.1 - - [11/Jul/2025 15:58:30] "POST /api/database-switch?session_id=session_oshl5tfnimcyg01zr HTTP/1.1" 200 -
+127.0.0.1 - - [11/Jul/2025 15:58:30] "GET /api/database-switch?session_id=session_oshl5tfnimcyg01zr HTTP/1.1" 200 -
+127.0.0.1 - - [11/Jul/2025 15:58:30] "GET /api/categories HTTP/1.1" 200 -
+127.0.0.1 - - [11/Jul/2025 15:58:30] "GET /api/products?session_id=session_oshl5tfnimcyg01zr HTTP/1.1" 200 -
+127.0.0.1 - - [11/Jul/2025 15:58:30] "GET /api/cart?session_id=session_oshl5tfnimcyg01zr HTTP/1.1" 200 -
+127.0.0.1 - - [11/Jul/2025 15:58:31] "GET /api/db-logs HTTP/1.1" 200 -
+127.0.0.1 - - [11/Jul/2025 15:58:31] "GET /api/api-logs HTTP/1.1" 200 -
+127.0.0.1 - - [11/Jul/2025 15:58:32] "OPTIONS /api/db-logs HTTP/1.1" 200 -
+127.0.0.1 - - [11/Jul/2025 15:58:32] "DELETE /api/db-logs HTTP/1.1" 200 -
+127.0.0.1 - - [11/Jul/2025 15:58:34] "OPTIONS /api/api-logs HTTP/1.1" 200 -
+127.0.0.1 - - [11/Jul/2025 15:58:34] "DELETE /api/api-logs HTTP/1.1" 200 -
+127.0.0.1 - - [11/Jul/2025 15:58:39] "GET /api/database-switch?session_id=session_oshl5tfnimcyg01zr HTTP/1.1" 200 -
+127.0.0.1 - - [11/Jul/2025 15:58:39] "GET /api/categories HTTP/1.1" 200 -
+127.0.0.1 - - [11/Jul/2025 15:58:39] "GET /api/cart?session_id=session_oshl5tfnimcyg01zr HTTP/1.1" 200 -
+127.0.0.1 - - [11/Jul/2025 15:58:39] "GET /api/products?session_id=session_oshl5tfnimcyg01zr HTTP/1.1" 200 -
+127.0.0.1 - - [11/Jul/2025 15:58:41] "GET /api/products?category=16&session_id=session_oshl5tfnimcyg01zr HTTP/1.1" 200 -
+127.0.0.1 - - [11/Jul/2025 15:58:45] "GET /api/db-logs HTTP/1.1" 200 -
+127.0.0.1 - - [11/Jul/2025 15:58:48] "GET /api/db-logs?database_type=mysql HTTP/1.1" 200 -
+127.0.0.1 - - [11/Jul/2025 15:58:49] "GET /api/db-logs?database_type=aerospike HTTP/1.1" 200 -
+127.0.0.1 - - [11/Jul/2025 15:59:02] "GET /api/db-logs HTTP/1.1" 200 -
+127.0.0.1 - - [11/Jul/2025 15:59:02] "GET /api/api-logs HTTP/1.1" 200 -
+127.0.0.1 - - [11/Jul/2025 16:02:25] "GET /api/database-switch?session_id=session_oshl5tfnimcyg01zr HTTP/1.1" 200 -
+127.0.0.1 - - [11/Jul/2025 16:02:25] "GET /api/categories HTTP/1.1" 200 -
+127.0.0.1 - - [11/Jul/2025 16:02:25] "GET /api/products?category=3&session_id=session_oshl5tfnimcyg01zr HTTP/1.1" 200 -
+127.0.0.1 - - [11/Jul/2025 16:02:25] "GET /api/cart?session_id=session_oshl5tfnimcyg01zr HTTP/1.1" 200 -
+127.0.0.1 - - [11/Jul/2025 16:02:26] "GET /api/db-logs HTTP/1.1" 200 -
+127.0.0.1 - - [11/Jul/2025 16:02:26] "GET /api/api-logs HTTP/1.1" 200 -
+127.0.0.1 - - [11/Jul/2025 16:03:20] "GET /api/products?session_id=session_oshl5tfnimcyg01zr HTTP/1.1" 200 -
+127.0.0.1 - - [11/Jul/2025 16:04:08] "GET /api/products?category=6&session_id=session_oshl5tfnimcyg01zr HTTP/1.1" 200 -
+127.0.0.1 - - [11/Jul/2025 16:08:24] "GET /api/database-switch?session_id=session_oshl5tfnimcyg01zr HTTP/1.1" 200 -
+127.0.0.1 - - [11/Jul/2025 16:08:24] "GET /api/categories HTTP/1.1" 200 -
+127.0.0.1 - - [11/Jul/2025 16:08:24] "GET /api/cart?session_id=session_oshl5tfnimcyg01zr HTTP/1.1" 200 -
 ✅ Database tables created/verified successfully
+✅ API logs table exists
 MySQL Manager initialized successfully
 Aerospike Manager connected successfully!
 🔍 AerospikeManager.log_query called: AEROSPIKE INSERT
@@ -103,154 +85,141 @@ Unified Database Manager initialized successfully
 🔍 MySQLManager.log_query called: MYSQL SELECT
 📊 Logging mysql query: MYSQL SELECT: SELECT * FROM categories...
 ✅ Successfully logged mysql query
+🌐 Logging API call: GET /api/categories - 200 (22.83ms)
+✅ Successfully logged API call
 🔍 MySQLManager.log_query called: MYSQL SELECT
 📊 Logging mysql query: MYSQL SELECT: SELECT * FROM categories...
+✅ Successfully logged mysql query
+🌐 Logging API call: GET /api/categories - 200 (22.53ms)
+✅ Successfully logged API call
+🌐 Logging API call: GET /api/database-switch - 200 (16.70ms)
 🔍 MySQLManager.log_query called: MYSQL SELECT
 📊 Logging mysql query: MYSQL SELECT: SELECT * FROM cart WHERE user_session = 'session_oshl5tfnimcyg01zr'...
-✅ Successfully logged mysql query
-✅ Successfully logged mysql query
-🔍 MySQLManager.log_query called: MYSQL SELECT
-📊 Logging mysql query: MYSQL SELECT: SELECT * FROM products...
-✅ Successfully logged mysql query
 🔍 MySQLManager.log_query called: MYSQL SELECT
 📊 Logging mysql query: MYSQL SELECT: SELECT * FROM categories...
+✅ Successfully logged API call
 ✅ Successfully logged mysql query
+🌐 Logging API call: GET /api/cart - 200 (35.84ms)
+✅ Successfully logged mysql query
+✅ Successfully logged API call
 🔍 MySQLManager.log_query called: MYSQL SELECT
-📊 Logging mysql query: MYSQL SELECT: SELECT * FROM products WHERE category_id = 2...
+📊 Logging mysql query: MYSQL SELECT: SELECT * FROM products...
+🌐 Logging API call: GET /api/categories - 200 (94.37ms)
 ✅ Successfully logged mysql query
+✅ Successfully logged API call
+🌐 Logging API call: GET /api/products - 200 (2043.48ms)
+✅ Successfully logged API call
 Switched to aerospike database
 🔍 AerospikeManager.log_query called: AEROSPIKE INSERT
 📊 Logging aerospike query: AEROSPIKE INSERT: Initialized 6 categories and 6 products in Aerospike...
 ✅ Successfully logged aerospike query
 ✅ Initialized Aerospike with 6 categories and 6 products
-🔍 AerospikeManager.log_query called: AEROSPIKE SCAN
-📊 Logging aerospike query: AEROSPIKE SCAN: SCAN grocery.cart WHERE user_session = "session_oshl5tfnimcyg01zr"...
-✅ Successfully logged aerospike query
-🔍 AerospikeManager.log_query called: AEROSPIKE SCAN
-📊 Logging aerospike query: AEROSPIKE SCAN: SCAN grocery.categories...
-✅ Successfully logged aerospike query
-🔍 AerospikeManager.log_query called: AEROSPIKE SCAN
-📊 Logging aerospike query: AEROSPIKE SCAN: SCAN grocery.products...
-✅ Successfully logged aerospike query
-Switched to mysql database
-🔍 MySQLManager.log_query called: MYSQL SELECT
-📊 Logging mysql query: MYSQL SELECT: SELECT * FROM cart WHERE user_session = 'session_oshl5tfnimcyg01zr'...
-✅ Successfully logged mysql query
-🔍 MySQLManager.log_query called: MYSQL SELECT
-📊 Logging mysql query: MYSQL SELECT: SELECT * FROM categories...
-✅ Successfully logged mysql query
-🔍 MySQLManager.log_query called: MYSQL SELECT
-📊 Logging mysql query: MYSQL SELECT: SELECT * FROM products...
-✅ Successfully logged mysql query
-🔍 MySQLManager.log_query called: MYSQL SELECT
-📊 Logging mysql query: MYSQL SELECT: SELECT * FROM products WHERE category_id = 10...
-✅ Successfully logged mysql query
-🔍 MySQLManager.log_query called: MYSQL SELECT
-📊 Logging mysql query: MYSQL SELECT: SELECT * FROM cart WHERE user_session = 'session_oshl5tfnimcyg01zr'...
-🔍 MySQLManager.log_query called: MYSQL SELECT
-📊 Logging mysql query: MYSQL SELECT: SELECT * FROM categories...
-✅ Successfully logged mysql query
-✅ Successfully logged mysql query
-🔍 MySQLManager.log_query called: MYSQL SELECT
-📊 Logging mysql query: MYSQL SELECT: SELECT * FROM products...
-✅ Successfully logged mysql query
-Switched to aerospike database
-🔍 AerospikeManager.log_query called: AEROSPIKE INSERT
-📊 Logging aerospike query: AEROSPIKE INSERT: Initialized 6 categories and 6 products in Aerospike...
-✅ Successfully logged aerospike query
-✅ Initialized Aerospike with 6 categories and 6 products
-🔍 AerospikeManager.log_query called: AEROSPIKE SCAN
-📊 Logging aerospike query: AEROSPIKE SCAN: SCAN grocery.cart WHERE user_session = "session_oshl5tfnimcyg01zr"...
-✅ Successfully logged aerospike query
-🔍 AerospikeManager.log_query called: AEROSPIKE SCAN
-📊 Logging aerospike query: AEROSPIKE SCAN: SCAN grocery.categories...
-✅ Successfully logged aerospike query
-🔍 AerospikeManager.log_query called: AEROSPIKE SCAN
-📊 Logging aerospike query: AEROSPIKE SCAN: SCAN grocery.products...
-✅ Successfully logged aerospike query
-🔍 AerospikeManager.log_query called: AEROSPIKE SCAN
-📊 Logging aerospike query: AEROSPIKE SCAN: SCAN grocery.products WHERE category_id = 4...
-✅ Successfully logged aerospike query
-🔍 AerospikeManager.log_query called: AEROSPIKE SCAN
-📊 Logging aerospike query: AEROSPIKE SCAN: SCAN grocery.products WHERE category_id = 2...
-✅ Successfully logged aerospike query
-🔍 AerospikeManager.log_query called: AEROSPIKE SCAN
-📊 Logging aerospike query: AEROSPIKE SCAN: SCAN grocery.products WHERE category_id = 15...
-✅ Successfully logged aerospike query
-Switched to aerospike database
-🔍 AerospikeManager.log_query called: AEROSPIKE INSERT
-📊 Logging aerospike query: AEROSPIKE INSERT: Initialized 6 categories and 6 products in Aerospike...
-✅ Successfully logged aerospike query
-✅ Initialized Aerospike with 6 categories and 6 products
-🔍 AerospikeManager.log_query called: AEROSPIKE SCAN
-📊 Logging aerospike query: AEROSPIKE SCAN: SCAN grocery.cart WHERE user_session = "session_oshl5tfnimcyg01zr"...
-🔍 AerospikeManager.log_query called: AEROSPIKE SCAN
-📊 Logging aerospike query: AEROSPIKE SCAN: SCAN grocery.categories...
-✅ Successfully logged aerospike query
-✅ Successfully logged aerospike query
-🔍 AerospikeManager.log_query called: AEROSPIKE SCAN
-📊 Logging aerospike query: AEROSPIKE SCAN: SCAN grocery.products...
-✅ Successfully logged aerospike query
-🔍 AerospikeManager.log_query called: AEROSPIKE SCAN
-📊 Logging aerospike query: AEROSPIKE SCAN: SCAN grocery.cart WHERE user_session = "session_oshl5tfnimcyg01zr"...
+🌐 Logging API call: POST /api/database-switch - 200 (14.66ms)
+✅ Successfully logged API call
+🌐 Logging API call: GET /api/database-switch - 200 (6.90ms)
+✅ Successfully logged API call
 🔍 AerospikeManager.log_query called: AEROSPIKE SCAN
 📊 Logging aerospike query: AEROSPIKE SCAN: SCAN grocery.categories...
 🔍 AerospikeManager.log_query called: AEROSPIKE SCAN
-📊 Logging aerospike query: AEROSPIKE SCAN: SCAN grocery.products...
-✅ Successfully logged aerospike query
+📊 Logging aerospike query: AEROSPIKE SCAN: SCAN grocery.cart WHERE user_session = "session_oshl5tfnimcyg01zr"...
 ✅ Successfully logged aerospike query
 ✅ Successfully logged aerospike query
 🔍 AerospikeManager.log_query called: AEROSPIKE GET
-📊 Logging aerospike query: AEROSPIKE GET: GET grocery.products.968...
-✅ Successfully logged aerospike query
-🔍 AerospikeManager.log_query called: AEROSPIKE INSERT
-📊 Logging aerospike query: AEROSPIKE INSERT: INSERT grocery.cart.session_oshl5tfnimcyg01zr_968...
-✅ Successfully logged aerospike query
+📊 Logging aerospike query: AEROSPIKE GET: GET grocery.products.1363...
+🌐 Logging API call: GET /api/categories - 200 (49.65ms)
 🔍 AerospikeManager.log_query called: AEROSPIKE SCAN
-📊 Logging aerospike query: AEROSPIKE SCAN: SCAN grocery.cart WHERE user_session = "session_oshl5tfnimcyg01zr"...
+📊 Logging aerospike query: AEROSPIKE SCAN: SCAN grocery.products...
 ✅ Successfully logged aerospike query
 🔍 AerospikeManager.log_query called: AEROSPIKE GET
 📊 Logging aerospike query: AEROSPIKE GET: GET grocery.products.968...
+✅ Successfully logged API call
 ✅ Successfully logged aerospike query
+🌐 Logging API call: GET /api/products - 200 (72.25ms)
+✅ Successfully logged aerospike query
+🌐 Logging API call: GET /api/cart - 200 (74.13ms)
+✅ Successfully logged API call
+✅ Successfully logged API call
+🔍 AerospikeManager.log_query called: AEROSPIKE SCAN
+📊 Logging aerospike query: AEROSPIKE SCAN: SCAN grocery.cart WHERE user_session = "session_oshl5tfnimcyg01zr"...
+🌐 Logging API call: GET /api/database-switch - 200 (7.96ms)
+🔍 AerospikeManager.log_query called: AEROSPIKE SCAN
+📊 Logging aerospike query: AEROSPIKE SCAN: SCAN grocery.categories...
+✅ Successfully logged aerospike query
+✅ Successfully logged API call
+🔍 AerospikeManager.log_query called: AEROSPIKE GET
+📊 Logging aerospike query: AEROSPIKE GET: GET grocery.products.1363...
+✅ Successfully logged aerospike query
+🌐 Logging API call: GET /api/categories - 200 (23.73ms)
+✅ Successfully logged aerospike query
+🔍 AerospikeManager.log_query called: AEROSPIKE SCAN
+📊 Logging aerospike query: AEROSPIKE SCAN: SCAN grocery.products...
+🔍 AerospikeManager.log_query called: AEROSPIKE GET
+📊 Logging aerospike query: AEROSPIKE GET: GET grocery.products.968...
+✅ Successfully logged API call
+✅ Successfully logged aerospike query
+✅ Successfully logged aerospike query
+🌐 Logging API call: GET /api/cart - 200 (36.04ms)
+🌐 Logging API call: GET /api/products - 200 (38.01ms)
+✅ Successfully logged API call
+✅ Successfully logged API call
+🔍 AerospikeManager.log_query called: AEROSPIKE SCAN
+📊 Logging aerospike query: AEROSPIKE SCAN: SCAN grocery.products WHERE category_id = 16...
+✅ Successfully logged aerospike query
+🌐 Logging API call: GET /api/products - 200 (30.43ms)
+✅ Successfully logged API call
+🌐 Logging API call: GET /api/database-switch - 200 (74.40ms)
+🔍 AerospikeManager.log_query called: AEROSPIKE SCAN
+📊 Logging aerospike query: AEROSPIKE SCAN: SCAN grocery.categories...
+🔍 AerospikeManager.log_query called: AEROSPIKE SCAN
+📊 Logging aerospike query: AEROSPIKE SCAN: SCAN grocery.cart WHERE user_session = "session_oshl5tfnimcyg01zr"...
+✅ Successfully logged aerospike query
+🔍 AerospikeManager.log_query called: AEROSPIKE SCAN
+📊 Logging aerospike query: AEROSPIKE SCAN: SCAN grocery.products WHERE category_id = 3...
+✅ Successfully logged API call
+✅ Successfully logged aerospike query
+🌐 Logging API call: GET /api/categories - 200 (113.48ms)
+🔍 AerospikeManager.log_query called: AEROSPIKE GET
+📊 Logging aerospike query: AEROSPIKE GET: GET grocery.products.1363...
+✅ Successfully logged aerospike query
+🌐 Logging API call: GET /api/products - 200 (138.16ms)
+✅ Successfully logged API call
+✅ Successfully logged aerospike query
+🔍 AerospikeManager.log_query called: AEROSPIKE GET
+📊 Logging aerospike query: AEROSPIKE GET: GET grocery.products.968...
+✅ Successfully logged API call
+✅ Successfully logged aerospike query
+🌐 Logging API call: GET /api/cart - 200 (165.20ms)
+✅ Successfully logged API call
+🔍 AerospikeManager.log_query called: AEROSPIKE SCAN
+📊 Logging aerospike query: AEROSPIKE SCAN: SCAN grocery.products...
+✅ Successfully logged aerospike query
+🌐 Logging API call: GET /api/products - 200 (63.60ms)
+✅ Successfully logged API call
+🔍 AerospikeManager.log_query called: AEROSPIKE SCAN
+📊 Logging aerospike query: AEROSPIKE SCAN: SCAN grocery.products WHERE category_id = 6...
+✅ Successfully logged aerospike query
+🌐 Logging API call: GET /api/products - 200 (69.64ms)
+✅ Successfully logged API call
+🌐 Logging API call: GET /api/database-switch - 200 (39.77ms)
 🔍 AerospikeManager.log_query called: AEROSPIKE SCAN
 📊 Logging aerospike query: AEROSPIKE SCAN: SCAN grocery.cart WHERE user_session = "session_oshl5tfnimcyg01zr"...
 🔍 AerospikeManager.log_query called: AEROSPIKE SCAN
 📊 Logging aerospike query: AEROSPIKE SCAN: SCAN grocery.categories...
+✅ Successfully logged API call
 ✅ Successfully logged aerospike query
 ✅ Successfully logged aerospike query
 🔍 AerospikeManager.log_query called: AEROSPIKE GET
+📊 Logging aerospike query: AEROSPIKE GET: GET grocery.products.1363...
+🌐 Logging API call: GET /api/categories - 200 (48.70ms)
+✅ Successfully logged aerospike query
+🔍 AerospikeManager.log_query called: AEROSPIKE GET
 📊 Logging aerospike query: AEROSPIKE GET: GET grocery.products.968...
+✅ Successfully logged API call
 🔍 AerospikeManager.log_query called: AEROSPIKE SCAN
-📊 Logging aerospike query: AEROSPIKE SCAN: SCAN grocery.products...
+📊 Logging aerospike query: AEROSPIKE SCAN: SCAN grocery.products WHERE category_id = 10...
 ✅ Successfully logged aerospike query
+🌐 Logging API call: GET /api/cart - 200 (76.62ms)
 ✅ Successfully logged aerospike query
-🔍 AerospikeManager.log_query called: AEROSPIKE SCAN
-📊 Logging aerospike query: AEROSPIKE SCAN: SCAN grocery.products WHERE category_id = 12...
-✅ Successfully logged aerospike query
-🔍 AerospikeManager.log_query called: AEROSPIKE SCAN
-127.0.0.1 - - [11/Jul/2025 12:31:29] "GET /api/categories HTTP/1.1" 200 -
-127.0.0.1 - - [11/Jul/2025 12:31:29] "GET /api/cart?session_id=session_oshl5tfnimcyg01zr HTTP/1.1" 200 -
-127.0.0.1 - - [11/Jul/2025 12:31:29] "GET /api/products?session_id=session_oshl5tfnimcyg01zr HTTP/1.1" 200 -
-127.0.0.1 - - [11/Jul/2025 12:31:41] "GET /api/database-switch?session_id=session_oshl5tfnimcyg01zr HTTP/1.1" 200 -
-127.0.0.1 - - [11/Jul/2025 12:31:41] "GET /api/categories HTTP/1.1" 200 -
-127.0.0.1 - - [11/Jul/2025 12:31:41] "GET /api/cart?session_id=session_oshl5tfnimcyg01zr HTTP/1.1" 200 -
-127.0.0.1 - - [11/Jul/2025 12:31:41] "GET /api/products?session_id=session_oshl5tfnimcyg01zr HTTP/1.1" 200 -
-127.0.0.1 - - [11/Jul/2025 12:32:09] "GET /api/database-switch?session_id=session_oshl5tfnimcyg01zr HTTP/1.1" 200 -
-127.0.0.1 - - [11/Jul/2025 12:32:09] "GET /api/categories HTTP/1.1" 200 -
-127.0.0.1 - - [11/Jul/2025 12:32:09] "GET /api/cart?session_id=session_oshl5tfnimcyg01zr HTTP/1.1" 200 -
-127.0.0.1 - - [11/Jul/2025 12:32:09] "GET /api/products?session_id=session_oshl5tfnimcyg01zr HTTP/1.1" 200 -
-127.0.0.1 - - [11/Jul/2025 12:32:11] "GET /api/products?category=17&session_id=session_oshl5tfnimcyg01zr HTTP/1.1" 200 -
-127.0.0.1 - - [11/Jul/2025 12:32:17] "GET /api/products?category=8&session_id=session_oshl5tfnimcyg01zr HTTP/1.1" 200 -
-127.0.0.1 - - [11/Jul/2025 12:32:19] "GET /api/products?category=19&session_id=session_oshl5tfnimcyg01zr HTTP/1.1" 200 -
-127.0.0.1 - - [11/Jul/2025 12:32:20] "GET /api/products?session_id=session_oshl5tfnimcyg01zr HTTP/1.1" 200 -
-127.0.0.1 - - [11/Jul/2025 12:32:29] "GET /api/products?category=11&session_id=session_oshl5tfnimcyg01zr HTTP/1.1" 200 -
-127.0.0.1 - - [11/Jul/2025 12:32:33] "GET /api/products?category=15&session_id=session_oshl5tfnimcyg01zr HTTP/1.1" 200 -
-127.0.0.1 - - [11/Jul/2025 12:32:35] "GET /api/products?category=16&session_id=session_oshl5tfnimcyg01zr HTTP/1.1" 200 -
-127.0.0.1 - - [11/Jul/2025 12:32:37] "OPTIONS /api/cart?session_id=session_oshl5tfnimcyg01zr HTTP/1.1" 200 -
-127.0.0.1 - - [11/Jul/2025 12:32:37] "POST /api/cart?session_id=session_oshl5tfnimcyg01zr HTTP/1.1" 200 -
-127.0.0.1 - - [11/Jul/2025 12:32:37] "GET /api/cart?session_id=session_oshl5tfnimcyg01zr HTTP/1.1" 200 -
-127.0.0.1 - - [11/Jul/2025 13:14:08] "GET /api/database-switch?session_id=session_oshl5tfnimcyg01zr HTTP/1.1" 200 -
-127.0.0.1 - - [11/Jul/2025 13:14:08] "GET /api/categories HTTP/1.1" 200 -
-127.0.0.1 - - [11/Jul/2025 13:14:08] "GET /api/products?session_id=session_oshl5tfnimcyg01zr HTTP/1.1" 200 -
-127.0.0.1 - - [11/Jul/2025 13:14:08] "GET /api/cart?session_id=session_oshl5tfnimcyg01zr HTTP/1.1" 200 -
-127.0.0.1 - - [11/Jul/2025 13:14:14] "GET /api/db-logs HTTP/1.1" 200 -
+🌐 Logging API call: GET /api/products - 200 (81.74ms)
+✅ Successfully logged API call
+127.0.0.1 - - [11/Jul/2025 16:08:24] "GET /api/products?category=10&session_id=session_oshl5tfnimcyg01zr HTTP/1.1" 200 -
