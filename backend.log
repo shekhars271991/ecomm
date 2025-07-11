@@ -64,3 +64,188 @@ Unified Database Manager initialized successfully
 127.0.0.1 - - [11/Jul/2025 12:19:05] "OPTIONS /api/db-logs?database_type=mysql HTTP/1.1" 200 -
 127.0.0.1 - - [11/Jul/2025 12:19:05] "DELETE /api/db-logs?database_type=mysql HTTP/1.1" 200 -
 127.0.0.1 - - [11/Jul/2025 12:19:06] "GET /api/db-logs HTTP/1.1" 200 -
+127.0.0.1 - - [11/Jul/2025 12:19:52] "OPTIONS /api/cart?session_id=session_oshl5tfnimcyg01zr HTTP/1.1" 200 -
+127.0.0.1 - - [11/Jul/2025 12:19:52] "[31m[1mPOST /api/cart?session_id=session_oshl5tfnimcyg01zr HTTP/1.1[0m" 400 -
+127.0.0.1 - - [11/Jul/2025 12:20:43] "GET /api/products?category=2&session_id=session_oshl5tfnimcyg01zr HTTP/1.1" 200 -
+127.0.0.1 - - [11/Jul/2025 12:20:45] "GET /api/products?category=15&session_id=session_oshl5tfnimcyg01zr HTTP/1.1" 200 -
+127.0.0.1 - - [11/Jul/2025 12:20:58] "OPTIONS /api/database-switch?session_id=session_oshl5tfnimcyg01zr HTTP/1.1" 200 -
+127.0.0.1 - - [11/Jul/2025 12:20:58] "POST /api/database-switch?session_id=session_oshl5tfnimcyg01zr HTTP/1.1" 200 -
+127.0.0.1 - - [11/Jul/2025 12:20:59] "GET /api/database-switch?session_id=session_oshl5tfnimcyg01zr HTTP/1.1" 200 -
+127.0.0.1 - - [11/Jul/2025 12:20:59] "GET /api/cart?session_id=session_oshl5tfnimcyg01zr HTTP/1.1" 200 -
+127.0.0.1 - - [11/Jul/2025 12:20:59] "GET /api/categories HTTP/1.1" 200 -
+127.0.0.1 - - [11/Jul/2025 12:20:59] "GET /api/products?session_id=session_oshl5tfnimcyg01zr HTTP/1.1" 200 -
+127.0.0.1 - - [11/Jul/2025 12:21:00] "GET /api/db-logs HTTP/1.1" 200 -
+127.0.0.1 - - [11/Jul/2025 12:21:03] "GET /api/db-logs?database_type=aerospike HTTP/1.1" 200 -
+127.0.0.1 - - [11/Jul/2025 12:22:11] "GET /api/database-switch?session_id=session_oshl5tfnimcyg01zr HTTP/1.1" 200 -
+127.0.0.1 - - [11/Jul/2025 12:22:11] "GET /api/cart?session_id=session_oshl5tfnimcyg01zr HTTP/1.1" 200 -
+127.0.0.1 - - [11/Jul/2025 12:22:11] "GET /api/categories HTTP/1.1" 200 -
+127.0.0.1 - - [11/Jul/2025 12:22:11] "GET /api/products?session_id=session_oshl5tfnimcyg01zr HTTP/1.1" 200 -
+127.0.0.1 - - [11/Jul/2025 12:22:16] "OPTIONS /api/cart?session_id=session_oshl5tfnimcyg01zr HTTP/1.1" 200 -
+127.0.0.1 - - [11/Jul/2025 12:22:16] "POST /api/cart?session_id=session_oshl5tfnimcyg01zr HTTP/1.1" 200 -
+127.0.0.1 - - [11/Jul/2025 12:22:16] "GET /api/cart?session_id=session_oshl5tfnimcyg01zr HTTP/1.1" 200 -
+127.0.0.1 - - [11/Jul/2025 12:24:57] "GET /api/database-switch?session_id=session_oshl5tfnimcyg01zr HTTP/1.1" 200 -
+127.0.0.1 - - [11/Jul/2025 12:24:57] "GET /api/categories HTTP/1.1" 200 -
+127.0.0.1 - - [11/Jul/2025 12:24:57] "GET /api/cart?session_id=session_oshl5tfnimcyg01zr HTTP/1.1" 200 -
+127.0.0.1 - - [11/Jul/2025 12:24:57] "GET /api/products?session_id=session_oshl5tfnimcyg01zr HTTP/1.1" 200 -
+127.0.0.1 - - [11/Jul/2025 12:25:11] "GET /api/products?category=12&session_id=session_oshl5tfnimcyg01zr HTTP/1.1" 200 -
+127.0.0.1 - - [11/Jul/2025 12:31:29] "GET /api/database-switch?session_id=session_oshl5tfnimcyg01zr HTTP/1.1" 200 -
+✅ Database tables created/verified successfully
+MySQL Manager initialized successfully
+Aerospike Manager connected successfully!
+🔍 AerospikeManager.log_query called: AEROSPIKE INSERT
+📊 Logging aerospike query: AEROSPIKE INSERT: Initialized 6 categories and 6 products in Aerospike...
+✅ Successfully logged aerospike query
+✅ Initialized Aerospike with 6 categories and 6 products
+Unified Database Manager initialized successfully
+✅ Database already contains 19 categories and 1740 products - skipping data load
+✅ Database initialization complete
+🚀 Starting Flask application...
+🔍 MySQLManager.log_query called: MYSQL SELECT
+📊 Logging mysql query: MYSQL SELECT: SELECT * FROM categories...
+✅ Successfully logged mysql query
+🔍 MySQLManager.log_query called: MYSQL SELECT
+📊 Logging mysql query: MYSQL SELECT: SELECT * FROM categories...
+🔍 MySQLManager.log_query called: MYSQL SELECT
+📊 Logging mysql query: MYSQL SELECT: SELECT * FROM cart WHERE user_session = 'session_oshl5tfnimcyg01zr'...
+✅ Successfully logged mysql query
+✅ Successfully logged mysql query
+🔍 MySQLManager.log_query called: MYSQL SELECT
+📊 Logging mysql query: MYSQL SELECT: SELECT * FROM products...
+✅ Successfully logged mysql query
+🔍 MySQLManager.log_query called: MYSQL SELECT
+📊 Logging mysql query: MYSQL SELECT: SELECT * FROM categories...
+✅ Successfully logged mysql query
+🔍 MySQLManager.log_query called: MYSQL SELECT
+📊 Logging mysql query: MYSQL SELECT: SELECT * FROM products WHERE category_id = 2...
+✅ Successfully logged mysql query
+Switched to aerospike database
+🔍 AerospikeManager.log_query called: AEROSPIKE INSERT
+📊 Logging aerospike query: AEROSPIKE INSERT: Initialized 6 categories and 6 products in Aerospike...
+✅ Successfully logged aerospike query
+✅ Initialized Aerospike with 6 categories and 6 products
+🔍 AerospikeManager.log_query called: AEROSPIKE SCAN
+📊 Logging aerospike query: AEROSPIKE SCAN: SCAN grocery.cart WHERE user_session = "session_oshl5tfnimcyg01zr"...
+✅ Successfully logged aerospike query
+🔍 AerospikeManager.log_query called: AEROSPIKE SCAN
+📊 Logging aerospike query: AEROSPIKE SCAN: SCAN grocery.categories...
+✅ Successfully logged aerospike query
+🔍 AerospikeManager.log_query called: AEROSPIKE SCAN
+📊 Logging aerospike query: AEROSPIKE SCAN: SCAN grocery.products...
+✅ Successfully logged aerospike query
+Switched to mysql database
+🔍 MySQLManager.log_query called: MYSQL SELECT
+📊 Logging mysql query: MYSQL SELECT: SELECT * FROM cart WHERE user_session = 'session_oshl5tfnimcyg01zr'...
+✅ Successfully logged mysql query
+🔍 MySQLManager.log_query called: MYSQL SELECT
+📊 Logging mysql query: MYSQL SELECT: SELECT * FROM categories...
+✅ Successfully logged mysql query
+🔍 MySQLManager.log_query called: MYSQL SELECT
+📊 Logging mysql query: MYSQL SELECT: SELECT * FROM products...
+✅ Successfully logged mysql query
+🔍 MySQLManager.log_query called: MYSQL SELECT
+📊 Logging mysql query: MYSQL SELECT: SELECT * FROM products WHERE category_id = 10...
+✅ Successfully logged mysql query
+🔍 MySQLManager.log_query called: MYSQL SELECT
+📊 Logging mysql query: MYSQL SELECT: SELECT * FROM cart WHERE user_session = 'session_oshl5tfnimcyg01zr'...
+🔍 MySQLManager.log_query called: MYSQL SELECT
+📊 Logging mysql query: MYSQL SELECT: SELECT * FROM categories...
+✅ Successfully logged mysql query
+✅ Successfully logged mysql query
+🔍 MySQLManager.log_query called: MYSQL SELECT
+📊 Logging mysql query: MYSQL SELECT: SELECT * FROM products...
+✅ Successfully logged mysql query
+Switched to aerospike database
+🔍 AerospikeManager.log_query called: AEROSPIKE INSERT
+📊 Logging aerospike query: AEROSPIKE INSERT: Initialized 6 categories and 6 products in Aerospike...
+✅ Successfully logged aerospike query
+✅ Initialized Aerospike with 6 categories and 6 products
+🔍 AerospikeManager.log_query called: AEROSPIKE SCAN
+📊 Logging aerospike query: AEROSPIKE SCAN: SCAN grocery.cart WHERE user_session = "session_oshl5tfnimcyg01zr"...
+✅ Successfully logged aerospike query
+🔍 AerospikeManager.log_query called: AEROSPIKE SCAN
+📊 Logging aerospike query: AEROSPIKE SCAN: SCAN grocery.categories...
+✅ Successfully logged aerospike query
+🔍 AerospikeManager.log_query called: AEROSPIKE SCAN
+📊 Logging aerospike query: AEROSPIKE SCAN: SCAN grocery.products...
+✅ Successfully logged aerospike query
+🔍 AerospikeManager.log_query called: AEROSPIKE SCAN
+📊 Logging aerospike query: AEROSPIKE SCAN: SCAN grocery.products WHERE category_id = 4...
+✅ Successfully logged aerospike query
+🔍 AerospikeManager.log_query called: AEROSPIKE SCAN
+📊 Logging aerospike query: AEROSPIKE SCAN: SCAN grocery.products WHERE category_id = 2...
+✅ Successfully logged aerospike query
+🔍 AerospikeManager.log_query called: AEROSPIKE SCAN
+📊 Logging aerospike query: AEROSPIKE SCAN: SCAN grocery.products WHERE category_id = 15...
+✅ Successfully logged aerospike query
+Switched to aerospike database
+🔍 AerospikeManager.log_query called: AEROSPIKE INSERT
+📊 Logging aerospike query: AEROSPIKE INSERT: Initialized 6 categories and 6 products in Aerospike...
+✅ Successfully logged aerospike query
+✅ Initialized Aerospike with 6 categories and 6 products
+🔍 AerospikeManager.log_query called: AEROSPIKE SCAN
+📊 Logging aerospike query: AEROSPIKE SCAN: SCAN grocery.cart WHERE user_session = "session_oshl5tfnimcyg01zr"...
+🔍 AerospikeManager.log_query called: AEROSPIKE SCAN
+📊 Logging aerospike query: AEROSPIKE SCAN: SCAN grocery.categories...
+✅ Successfully logged aerospike query
+✅ Successfully logged aerospike query
+🔍 AerospikeManager.log_query called: AEROSPIKE SCAN
+📊 Logging aerospike query: AEROSPIKE SCAN: SCAN grocery.products...
+✅ Successfully logged aerospike query
+🔍 AerospikeManager.log_query called: AEROSPIKE SCAN
+📊 Logging aerospike query: AEROSPIKE SCAN: SCAN grocery.cart WHERE user_session = "session_oshl5tfnimcyg01zr"...
+🔍 AerospikeManager.log_query called: AEROSPIKE SCAN
+📊 Logging aerospike query: AEROSPIKE SCAN: SCAN grocery.categories...
+🔍 AerospikeManager.log_query called: AEROSPIKE SCAN
+📊 Logging aerospike query: AEROSPIKE SCAN: SCAN grocery.products...
+✅ Successfully logged aerospike query
+✅ Successfully logged aerospike query
+✅ Successfully logged aerospike query
+🔍 AerospikeManager.log_query called: AEROSPIKE GET
+📊 Logging aerospike query: AEROSPIKE GET: GET grocery.products.968...
+✅ Successfully logged aerospike query
+🔍 AerospikeManager.log_query called: AEROSPIKE INSERT
+📊 Logging aerospike query: AEROSPIKE INSERT: INSERT grocery.cart.session_oshl5tfnimcyg01zr_968...
+✅ Successfully logged aerospike query
+🔍 AerospikeManager.log_query called: AEROSPIKE SCAN
+📊 Logging aerospike query: AEROSPIKE SCAN: SCAN grocery.cart WHERE user_session = "session_oshl5tfnimcyg01zr"...
+✅ Successfully logged aerospike query
+🔍 AerospikeManager.log_query called: AEROSPIKE GET
+📊 Logging aerospike query: AEROSPIKE GET: GET grocery.products.968...
+✅ Successfully logged aerospike query
+🔍 AerospikeManager.log_query called: AEROSPIKE SCAN
+📊 Logging aerospike query: AEROSPIKE SCAN: SCAN grocery.cart WHERE user_session = "session_oshl5tfnimcyg01zr"...
+🔍 AerospikeManager.log_query called: AEROSPIKE SCAN
+📊 Logging aerospike query: AEROSPIKE SCAN: SCAN grocery.categories...
+✅ Successfully logged aerospike query
+✅ Successfully logged aerospike query
+🔍 AerospikeManager.log_query called: AEROSPIKE GET
+📊 Logging aerospike query: AEROSPIKE GET: GET grocery.products.968...
+🔍 AerospikeManager.log_query called: AEROSPIKE SCAN
+📊 Logging aerospike query: AEROSPIKE SCAN: SCAN grocery.products...
+✅ Successfully logged aerospike query
+✅ Successfully logged aerospike query
+🔍 AerospikeManager.log_query called: AEROSPIKE SCAN
+📊 Logging aerospike query: AEROSPIKE SCAN: SCAN grocery.products WHERE category_id = 12...
+✅ Successfully logged aerospike query
+🔍 AerospikeManager.log_query called: AEROSPIKE SCAN
+127.0.0.1 - - [11/Jul/2025 12:31:29] "GET /api/categories HTTP/1.1" 200 -
+127.0.0.1 - - [11/Jul/2025 12:31:29] "GET /api/cart?session_id=session_oshl5tfnimcyg01zr HTTP/1.1" 200 -
+127.0.0.1 - - [11/Jul/2025 12:31:29] "GET /api/products?session_id=session_oshl5tfnimcyg01zr HTTP/1.1" 200 -
+127.0.0.1 - - [11/Jul/2025 12:31:41] "GET /api/database-switch?session_id=session_oshl5tfnimcyg01zr HTTP/1.1" 200 -
+127.0.0.1 - - [11/Jul/2025 12:31:41] "GET /api/categories HTTP/1.1" 200 -
+127.0.0.1 - - [11/Jul/2025 12:31:41] "GET /api/cart?session_id=session_oshl5tfnimcyg01zr HTTP/1.1" 200 -
+127.0.0.1 - - [11/Jul/2025 12:31:41] "GET /api/products?session_id=session_oshl5tfnimcyg01zr HTTP/1.1" 200 -
+127.0.0.1 - - [11/Jul/2025 12:32:09] "GET /api/database-switch?session_id=session_oshl5tfnimcyg01zr HTTP/1.1" 200 -
+127.0.0.1 - - [11/Jul/2025 12:32:09] "GET /api/categories HTTP/1.1" 200 -
+127.0.0.1 - - [11/Jul/2025 12:32:09] "GET /api/cart?session_id=session_oshl5tfnimcyg01zr HTTP/1.1" 200 -
+127.0.0.1 - - [11/Jul/2025 12:32:09] "GET /api/products?session_id=session_oshl5tfnimcyg01zr HTTP/1.1" 200 -
+127.0.0.1 - - [11/Jul/2025 12:32:11] "GET /api/products?category=17&session_id=session_oshl5tfnimcyg01zr HTTP/1.1" 200 -
+127.0.0.1 - - [11/Jul/2025 12:32:17] "GET /api/products?category=8&session_id=session_oshl5tfnimcyg01zr HTTP/1.1" 200 -
+127.0.0.1 - - [11/Jul/2025 12:32:19] "GET /api/products?category=19&session_id=session_oshl5tfnimcyg01zr HTTP/1.1" 200 -
+127.0.0.1 - - [11/Jul/2025 12:32:20] "GET /api/products?session_id=session_oshl5tfnimcyg01zr HTTP/1.1" 200 -
+127.0.0.1 - - [11/Jul/2025 12:32:29] "GET /api/products?category=11&session_id=session_oshl5tfnimcyg01zr HTTP/1.1" 200 -
+127.0.0.1 - - [11/Jul/2025 12:32:33] "GET /api/products?category=15&session_id=session_oshl5tfnimcyg01zr HTTP/1.1" 200 -
+127.0.0.1 - - [11/Jul/2025 12:32:35] "GET /api/products?category=16&session_id=session_oshl5tfnimcyg01zr HTTP/1.1" 200 -
+127.0.0.1 - - [11/Jul/2025 12:32:37] "OPTIONS /api/cart?session_id=session_oshl5tfnimcyg01zr HTTP/1.1" 200 -
+127.0.0.1 - - [11/Jul/2025 12:32:37] "POST /api/cart?session_id=session_oshl5tfnimcyg01zr HTTP/1.1" 200 -
+127.0.0.1 - - [11/Jul/2025 12:32:37] "GET /api/cart?session_id=session_oshl5tfnimcyg01zr HTTP/1.1" 200 -

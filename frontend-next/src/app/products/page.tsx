@@ -1,8 +1,8 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
-import { ShoppingCart, Search, Clock, Truck, Star, Plus, Minus, Filter, MapPin, User, Heart, Menu, X, ArrowRight, Database, ChevronDown } from 'lucide-react'
+import { useSearchParams, useRouter } from 'next/navigation'
+import { ShoppingCart, Search, Plus, Minus, Heart, Database, ChevronDown, ArrowLeft, User, MapPin, Menu, X } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useQuery } from 'react-query'
 import toast from 'react-hot-toast'
@@ -11,18 +11,23 @@ import { renderIcon } from '@/lib/iconMapping'
 import type { Product, Category, Cart } from '@/types'
 import Image from 'next/image'
 
-export default function HomePage() {
+export default function ProductsPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const categoryId = searchParams.get('category')
+  
+  const [selectedCategory, setSelectedCategory] = useState<number | null>(
+    categoryId ? parseInt(categoryId) : null
+  )
   const [searchQuery, setSearchQuery] = useState('')
-  const [cartItems, setCartItems] = useState<Cart | null>(null)
-  const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [quantities, setQuantities] = useState<Record<number, number>>({})
   const [currentDatabase, setCurrentDatabase] = useState<string>('mysql')
   const [showDatabaseDropdown, setShowDatabaseDropdown] = useState(false)
   const [showQueryLog, setShowQueryLog] = useState(false)
   const [queryLog, setQueryLog] = useState<any[]>([])
-  const [queryFilter, setQueryFilter] = useState<string>('all') // 'all', 'mysql', 'aerospike'
+  const [queryFilter, setQueryFilter] = useState<string>('all')
   const [showCart, setShowCart] = useState(false)
+  const [isMenuOpen, setIsMenuOpen] = useState(false)
 
   // Fetch categories
   const { data: categories = [], isLoading: categoriesLoading } = useQuery('categories', async () => {
@@ -30,7 +35,6 @@ export default function HomePage() {
       const response = await fetch('/api/categories')
       const data = await response.json()
       
-      // Extract query log from debug info if available
       if (data?.debug?.recent_queries) {
         setQueryLog(data.debug.recent_queries)
       }
@@ -41,10 +45,10 @@ export default function HomePage() {
     }
   })
 
-  // Fetch featured products (no category filter on homepage)
+  // Fetch products
   const { data: products = [], isLoading: productsLoading } = useQuery(
-    ['products', searchQuery],
-    () => apiService.getProducts({ search: searchQuery || undefined }),
+    ['products', selectedCategory, searchQuery],
+    () => apiService.getProducts({ category: selectedCategory || undefined, search: searchQuery || undefined }),
     { enabled: true }
   )
 
@@ -58,6 +62,9 @@ export default function HomePage() {
     }
   })
 
+  const cartItemCount = cart?.total_quantity || 0
+
+  // Cart management functions
   const handleAddToCart = async (productId: number, quantity: number = 1) => {
     try {
       await apiService.addToCart(productId, quantity)
@@ -99,18 +106,6 @@ export default function HomePage() {
     }
   }
 
-  const handleDatabaseSwitch = async (database: 'mysql' | 'aerospike') => {
-    try {
-      await apiService.switchDatabase(database)
-      setCurrentDatabase(database)
-      toast.success(`Switched to ${database.toUpperCase()} database`)
-      // Refetch data after switching
-      window.location.reload()
-    } catch (error) {
-      toast.error(handleApiError(error))
-    }
-  }
-
   const updateQuantity = (productId: number, delta: number) => {
     setQuantities(prev => ({
       ...prev,
@@ -118,10 +113,27 @@ export default function HomePage() {
     }))
   }
 
-  const featuredProducts = products.slice(0, 8)
-  const cartItemCount = cart?.total_quantity || 0
+  const handleCategorySelect = (categoryId: number | null) => {
+    setSelectedCategory(categoryId)
+    const params = new URLSearchParams()
+    if (categoryId) {
+      params.set('category', categoryId.toString())
+    }
+    router.push(`/products?${params.toString()}`)
+  }
 
-  // Fetch query logs
+  const handleDatabaseSwitch = async (database: 'mysql' | 'aerospike') => {
+    try {
+      await apiService.switchDatabase(database)
+      setCurrentDatabase(database)
+      toast.success(`Switched to ${database.toUpperCase()} database`)
+      window.location.reload()
+    } catch (error) {
+      toast.error(handleApiError(error))
+    }
+  }
+
+  // Query log functions
   const fetchQueryLogs = async () => {
     try {
       const filterParam = queryFilter !== 'all' ? `?database_type=${queryFilter}` : ''
@@ -136,7 +148,6 @@ export default function HomePage() {
     }
   }
 
-  // Clear query logs
   const clearQueryLogs = async () => {
     try {
       const filterParam = queryFilter !== 'all' ? `?database_type=${queryFilter}` : ''
@@ -157,20 +168,17 @@ export default function HomePage() {
     }
   }
 
-  // Calculate average query time
   const calculateAverageQueryTime = () => {
     if (queryLog.length === 0) return 0
     const total = queryLog.reduce((sum, query) => sum + (query.time_taken_ms || 0), 0)
     return Math.round(total / queryLog.length * 100) / 100
   }
 
-  // Filter queries based on selected filter
   const filteredQueries = queryLog.filter(query => {
     if (queryFilter === 'all') return true
     return query.database_type === queryFilter
   })
 
-  // Fetch logs when filter changes or modal opens
   useEffect(() => {
     if (showQueryLog) {
       fetchQueryLogs()
@@ -188,6 +196,10 @@ export default function HomePage() {
     return () => document.removeEventListener('click', handleClickOutside)
   }, [showDatabaseDropdown])
 
+  const selectedCategoryName = selectedCategory 
+    ? categories.find(cat => cat.id === selectedCategory)?.name || 'Category'
+    : 'All Products'
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-neutral-50 to-neutral-100">
       {/* Header */}
@@ -195,25 +207,25 @@ export default function HomePage() {
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             {/* Logo */}
-            <div className="flex items-center space-x-2">
-              <div className="w-10 h-10 bg-primary-500 rounded-xl flex items-center justify-center">
-                <ShoppingCart className="w-6 h-6 text-white" />
-              </div>
-              <div>
-                <h1 className="text-xl font-bold text-neutral-800">QuickGrocery</h1>
-                <p className="text-xs text-neutral-500">Delivery in 10 minutes</p>
-              </div>
-            </div>
-
-            {/* Location */}
-            <div className="hidden md:flex items-center space-x-2 text-sm text-neutral-600">
-              <MapPin className="w-4 h-4" />
-              <span>Deliver to Home</span>
-            </div>
-
-            {/* Database Selection & Actions */}
             <div className="flex items-center space-x-4">
-              {/* Database Selector - Simple Dropdown */}
+              <button
+                onClick={() => router.push('/')}
+                className="flex items-center space-x-2 hover:opacity-75 transition-opacity"
+              >
+                <ArrowLeft className="w-5 h-5 text-neutral-600" />
+                <div className="w-10 h-10 bg-primary-500 rounded-xl flex items-center justify-center">
+                  <ShoppingCart className="w-6 h-6 text-white" />
+                </div>
+                <div>
+                  <h1 className="text-xl font-bold text-neutral-800">QuickGrocery</h1>
+                  <p className="text-xs text-neutral-500">Delivery in 10 minutes</p>
+                </div>
+              </button>
+            </div>
+
+            {/* Right side actions */}
+            <div className="flex items-center space-x-4">
+              {/* Database Selector */}
               <div className="relative">
                 <button
                   className="flex items-center space-x-2 bg-neutral-100 hover:bg-neutral-200 px-3 py-2 rounded-lg text-sm font-medium transition-colors"
@@ -320,196 +332,185 @@ export default function HomePage() {
               <input
                 type="text"
                 placeholder="Search for products..."
-                className="w-full pl-12 pr-16 py-4 bg-neutral-100 rounded-2xl focus:outline-none focus:ring-2 focus:ring-primary-500 focus:bg-white transition-all duration-200"
+                className="w-full pl-12 pr-4 py-3 bg-neutral-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 focus:bg-white transition-all duration-200"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
-              <button className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-primary-500 text-white px-4 py-2 rounded-xl hover:bg-primary-600 transition-colors">
-                <ArrowRight className="w-4 h-4" />
-              </button>
             </div>
           </div>
         </div>
       </header>
 
-      {/* Hero Section */}
-      <section className="bg-gradient-to-r from-primary-500 to-accent-500 text-white py-12">
-        <div className="container mx-auto px-4">
-          <div className="flex flex-col md:flex-row items-center">
-            <div className="md:w-1/2 mb-8 md:mb-0">
-              <h2 className="text-4xl md:text-5xl font-bold mb-4">
-                Groceries delivered in 
-                <span className="block text-yellow-300">10 minutes</span>
-              </h2>
-              <p className="text-xl mb-6 opacity-90">
-                Get fresh groceries & essentials delivered to your doorstep
-              </p>
-              <div className="flex flex-wrap gap-4 text-sm">
-                <div className="flex items-center space-x-2">
-                  <Clock className="w-4 h-4" />
-                  <span>10 min delivery</span>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Truck className="w-4 h-4" />
-                  <span>Free delivery</span>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Star className="w-4 h-4" />
-                  <span>Best quality</span>
-                </div>
-              </div>
-            </div>
-            <div className="md:w-1/2">
-              <div className="relative">
-                <div className="w-80 h-80 bg-white/20 rounded-full flex items-center justify-center animate-float">
-                  <div className="w-60 h-60 bg-white/30 rounded-full flex items-center justify-center">
-                    <ShoppingCart className="w-20 h-20 text-white" />
+      <div className="container mx-auto px-4 py-6">
+        <div className="flex gap-8">
+          {/* Left Sidebar - Categories */}
+          <div className="hidden lg:block w-64 flex-shrink-0">
+            <div className="bg-white rounded-2xl shadow-soft border border-neutral-200 p-6 sticky top-24">
+              <h3 className="text-lg font-bold text-neutral-800 mb-4">Categories</h3>
+              
+              {/* All Products Option */}
+              <button
+                onClick={() => handleCategorySelect(null)}
+                className={`w-full text-left p-3 rounded-xl transition-all duration-200 mb-2 ${
+                  selectedCategory === null 
+                    ? 'bg-primary-100 text-primary-700 border-l-4 border-primary-500' 
+                    : 'hover:bg-neutral-50 text-neutral-700'
+                }`}
+              >
+                <div className="flex items-center space-x-3">
+                  <div className="w-8 h-8 bg-gradient-to-r from-primary-500 to-accent-500 rounded-lg flex items-center justify-center">
+                    <ShoppingCart className="w-4 h-4 text-white" />
                   </div>
+                  <span className="font-medium">All Products</span>
                 </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
+              </button>
 
-      {/* Categories */}
-      <section className="py-8 bg-white">
-        <div className="container mx-auto px-4">
-          <h3 className="text-2xl font-bold text-neutral-800 mb-6">Shop by Category</h3>
-          <div className="category-grid">
-            {categoriesLoading ? (
-              Array.from({ length: 8 }).map((_, index) => (
-                <div key={index} className="bg-neutral-100 rounded-2xl p-6 animate-pulse">
-                  <div className="w-12 h-12 bg-neutral-200 rounded-full mb-3"></div>
-                  <div className="h-4 bg-neutral-200 rounded"></div>
-                </div>
-              ))
-            ) : (
-              categories.map((category: Category) => (
-                <motion.button
-                  key={category.id}
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  className="card p-6 text-center transition-all duration-200 hover:shadow-md hover:scale-105"
-                  onClick={() => router.push(`/products?category=${category.id}`)}
-                >
-                  <div className="text-3xl mb-3 flex justify-center">
-                    {renderIcon(category.icon, { className: "w-8 h-8 text-primary-600" })}
-                  </div>
-                  <h4 className="font-medium text-neutral-800">{category.name}</h4>
-                </motion.button>
-              ))
-            )}
-          </div>
-        </div>
-      </section>
-
-      {/* Products */}
-      <section className="py-8">
-        <div className="container mx-auto px-4">
-          <div className="flex items-center justify-between mb-6">
-            <h3 className="text-2xl font-bold text-neutral-800">Featured Products</h3>
-            <button 
-              onClick={() => router.push('/products')}
-              className="text-primary-500 hover:text-primary-600 font-medium"
-            >
-              View All
-            </button>
-          </div>
-
-          <div className="product-grid">
-            {productsLoading ? (
-              Array.from({ length: 8 }).map((_, index) => (
-                <div key={index} className="card animate-pulse">
-                  <div className="aspect-square bg-neutral-200"></div>
-                  <div className="p-4">
-                    <div className="h-4 bg-neutral-200 rounded mb-2"></div>
-                    <div className="h-6 bg-neutral-200 rounded"></div>
-                  </div>
-                </div>
-              ))
-            ) : (
-              featuredProducts.map((product) => (
-                <motion.div
-                  key={product.id}
-                  whileHover={{ y: -5 }}
-                  className="card card-hover relative overflow-hidden group"
-                >
-                  <div className="aspect-square relative overflow-hidden">
-                    <Image
-                      src={product.image_url || '/placeholder-product.jpg'}
-                      alt={product.name}
-                      fill
-                      className="object-cover group-hover:scale-110 transition-transform duration-300"
-                    />
-                    <button className="absolute top-3 right-3 w-8 h-8 bg-white/80 rounded-full flex items-center justify-center hover:bg-white transition-colors">
-                      <Heart className="w-4 h-4 text-neutral-600" />
+              {/* Category List */}
+              <div className="space-y-2">
+                {categoriesLoading ? (
+                  Array.from({ length: 6 }).map((_, index) => (
+                    <div key={index} className="p-3 bg-neutral-100 rounded-xl animate-pulse">
+                      <div className="flex items-center space-x-3">
+                        <div className="w-8 h-8 bg-neutral-200 rounded-lg"></div>
+                        <div className="h-4 bg-neutral-200 rounded flex-1"></div>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  categories.map((category: Category) => (
+                    <button
+                      key={category.id}
+                      onClick={() => handleCategorySelect(category.id)}
+                      className={`w-full text-left p-3 rounded-xl transition-all duration-200 ${
+                        selectedCategory === category.id 
+                          ? 'bg-primary-100 text-primary-700 border-l-4 border-primary-500' 
+                          : 'hover:bg-neutral-50 text-neutral-700'
+                      }`}
+                    >
+                      <div className="flex items-center space-x-3">
+                        <div className="w-8 h-8 bg-neutral-100 rounded-lg flex items-center justify-center">
+                          {renderIcon(category.icon, { className: "w-4 h-4 text-primary-600" })}
+                        </div>
+                        <span className="font-medium">{category.name}</span>
+                      </div>
                     </button>
+                  ))
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Main Content */}
+          <div className="flex-1">
+            {/* Page Header */}
+            <div className="mb-6">
+              <h1 className="text-3xl font-bold text-neutral-800 mb-2">{selectedCategoryName}</h1>
+              <p className="text-neutral-600">
+                {products.length} product{products.length !== 1 ? 's' : ''} available
+              </p>
+            </div>
+
+            {/* Products Grid */}
+            <div className="product-grid">
+              {productsLoading ? (
+                Array.from({ length: 12 }).map((_, index) => (
+                  <div key={index} className="card animate-pulse">
+                    <div className="aspect-square bg-neutral-200"></div>
+                    <div className="p-4">
+                      <div className="h-4 bg-neutral-200 rounded mb-2"></div>
+                      <div className="h-6 bg-neutral-200 rounded"></div>
+                    </div>
                   </div>
-                  
-                  <div className="p-4">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-xs text-primary-500 font-medium bg-primary-50 px-2 py-1 rounded-full">
-                        {product.category?.name || 'Product'}
-                      </span>
-                      <span className="text-xs text-green-600 font-medium">
-                        {product.stock > 0 ? 'In Stock' : 'Out of Stock'}
-                      </span>
+                ))
+              ) : products.length > 0 ? (
+                products.map((product) => (
+                  <motion.div
+                    key={product.id}
+                    whileHover={{ y: -5 }}
+                    className="card card-hover relative overflow-hidden group"
+                  >
+                    <div className="aspect-square relative overflow-hidden">
+                      <Image
+                        src={product.image_url || '/placeholder-product.jpg'}
+                        alt={product.name}
+                        fill
+                        className="object-cover group-hover:scale-110 transition-transform duration-300"
+                      />
+                      <button className="absolute top-3 right-3 w-8 h-8 bg-white/80 rounded-full flex items-center justify-center hover:bg-white transition-colors">
+                        <Heart className="w-4 h-4 text-neutral-600" />
+                      </button>
                     </div>
                     
-                    <h4 className="font-semibold text-neutral-800 mb-1 line-clamp-2">{product.name}</h4>
-                    <p className="text-sm text-neutral-600 mb-3 line-clamp-1">{product.description}</p>
-                    
-                    <div className="flex items-center justify-between">
-                      <div className="text-lg font-bold text-neutral-800">
-                        {formatPrice(product.price)}
+                    <div className="p-4">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-xs text-primary-500 font-medium bg-primary-50 px-2 py-1 rounded-full">
+                          {product.category?.name || 'Product'}
+                        </span>
+                        <span className="text-xs text-green-600 font-medium">
+                          {product.stock > 0 ? 'In Stock' : 'Out of Stock'}
+                        </span>
                       </div>
                       
-                      <div className="flex items-center space-x-2">
-                        {quantities[product.id] > 0 ? (
-                          <div className="flex items-center space-x-2">
-                            <button
-                              onClick={() => updateQuantity(product.id, -1)}
-                              className="w-8 h-8 bg-primary-100 rounded-full flex items-center justify-center hover:bg-primary-200 transition-colors"
-                            >
-                              <Minus className="w-4 h-4 text-primary-600" />
-                            </button>
-                            <span className="font-medium text-neutral-800 w-8 text-center">
-                              {quantities[product.id]}
-                            </span>
+                      <h4 className="font-semibold text-neutral-800 mb-1 line-clamp-2">{product.name}</h4>
+                      <p className="text-sm text-neutral-600 mb-3 line-clamp-1">{product.description}</p>
+                      
+                      <div className="flex items-center justify-between">
+                        <div className="text-lg font-bold text-neutral-800">
+                          {formatPrice(product.price)}
+                        </div>
+                        
+                        <div className="flex items-center space-x-2">
+                          {quantities[product.id] > 0 ? (
+                            <div className="flex items-center space-x-2">
+                              <button
+                                onClick={() => updateQuantity(product.id, -1)}
+                                className="w-8 h-8 bg-primary-100 rounded-full flex items-center justify-center hover:bg-primary-200 transition-colors"
+                              >
+                                <Minus className="w-4 h-4 text-primary-600" />
+                              </button>
+                              <span className="font-medium text-neutral-800 w-8 text-center">
+                                {quantities[product.id]}
+                              </span>
+                              <button
+                                onClick={() => updateQuantity(product.id, 1)}
+                                className="w-8 h-8 bg-primary-100 rounded-full flex items-center justify-center hover:bg-primary-200 transition-colors"
+                              >
+                                <Plus className="w-4 h-4 text-primary-600" />
+                              </button>
+                            </div>
+                          ) : (
                             <button
                               onClick={() => updateQuantity(product.id, 1)}
-                              className="w-8 h-8 bg-primary-100 rounded-full flex items-center justify-center hover:bg-primary-200 transition-colors"
+                              className="w-8 h-8 bg-primary-500 rounded-full flex items-center justify-center hover:bg-primary-600 transition-colors"
                             >
-                              <Plus className="w-4 h-4 text-primary-600" />
+                              <Plus className="w-4 h-4 text-white" />
                             </button>
-                          </div>
-                        ) : (
-                          <button
-                            onClick={() => updateQuantity(product.id, 1)}
-                            className="w-8 h-8 bg-primary-500 rounded-full flex items-center justify-center hover:bg-primary-600 transition-colors"
-                          >
-                            <Plus className="w-4 h-4 text-white" />
-                          </button>
-                        )}
-                        
-                        {quantities[product.id] > 0 && (
-                          <button
-                            onClick={() => handleAddToCart(product.id, quantities[product.id])}
-                            className="btn btn-primary text-xs px-3 py-1"
-                          >
-                            Add
-                          </button>
-                        )}
+                          )}
+                          
+                          {quantities[product.id] > 0 && (
+                            <button
+                              onClick={() => handleAddToCart(product.id, quantities[product.id])}
+                              className="btn btn-primary text-xs px-3 py-1"
+                            >
+                              Add
+                            </button>
+                          )}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                </motion.div>
-              ))
-            )}
+                  </motion.div>
+                ))
+              ) : (
+                <div className="col-span-full text-center py-12">
+                  <ShoppingCart className="w-16 h-16 text-neutral-300 mx-auto mb-4" />
+                  <h3 className="text-lg font-semibold text-neutral-600 mb-2">No products found</h3>
+                  <p className="text-neutral-500">Try searching for different terms or browse all categories.</p>
+                </div>
+              )}
+            </div>
           </div>
         </div>
-      </section>
+      </div>
 
       {/* Query Log Modal */}
       <AnimatePresence>
@@ -599,6 +600,7 @@ export default function HomePage() {
                     </div>
                   </div>
                 </div>
+                
                 <div className="space-y-3">
                   {filteredQueries.length > 0 ? (
                     filteredQueries.map((query, index) => (
@@ -607,7 +609,7 @@ export default function HomePage() {
                           <div className="flex items-center space-x-2">
                             <span className={`px-2 py-1 rounded-full text-xs font-medium ${
                               query.database_type === 'mysql' 
-                                ? 'bg-blue-100 text-blue-700' 
+                                ? 'bg-blue-100 text-blue-700'
                                 : 'bg-purple-100 text-purple-700'
                             }`}>
                               {query.database_type?.toUpperCase()}
