@@ -25,6 +25,7 @@ class Colors:
 backend_process = None
 frontend_process = None
 refresh_data = False
+frontend_type = 'next'  # Default to Next.js
 
 def print_colored(message, color=Colors.NC):
     """Print colored message to terminal"""
@@ -37,9 +38,12 @@ def parse_arguments():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  python run_app.py           # Normal startup (skip data load if data exists)
-  python run_app.py -r        # Force refresh all data
-  python run_app.py --refresh # Force refresh all data (long form)
+  python run_app.py                    # Normal startup with Next.js frontend
+  python run_app.py -f python         # Use Python Flask frontend
+  python run_app.py -f next           # Use Next.js frontend (default)
+  python run_app.py -r                # Force refresh all data with Next.js frontend
+  python run_app.py -r -f python      # Force refresh data with Python frontend
+  python run_app.py --refresh --frontend next  # Force refresh with Next.js frontend
         """
     )
     
@@ -47,6 +51,13 @@ Examples:
         '-r', '--refresh',
         action='store_true',
         help='Force refresh all data from CSV (truncates existing data)'
+    )
+    
+    parser.add_argument(
+        '-f', '--frontend',
+        choices=['next', 'python'],
+        default='next',
+        help='Choose frontend type: "next" (default) or "python"'
     )
     
     return parser.parse_args()
@@ -79,6 +90,7 @@ def cleanup_processes():
     try:
         subprocess.run(["pkill", "-f", "python.*backend/app.py"], stderr=subprocess.DEVNULL)
         subprocess.run(["pkill", "-f", "python.*frontend/frontend_app.py"], stderr=subprocess.DEVNULL)
+        subprocess.run(["pkill", "-f", "node.*next.*dev"], stderr=subprocess.DEVNULL)
     except:
         pass
     
@@ -146,22 +158,62 @@ def install_backend_dependencies():
         print_colored(f"❌ Failed to install backend dependencies: {result.stderr}", Colors.RED)
         return False
 
-def install_frontend_dependencies():
-    """Install frontend dependencies"""
-    try:
-        import requests
-        return True
-    except ImportError:
-        print_colored("📦 Installing frontend dependencies...", Colors.YELLOW)
-        result = subprocess.run([sys.executable, "-m", "pip", "install", "requests"], 
-                              capture_output=True, text=True)
-        
-        if result.returncode == 0:
-            print_colored("✅ Frontend dependencies installed", Colors.GREEN)
-            return True
-        else:
-            print_colored(f"❌ Failed to install frontend dependencies: {result.stderr}", Colors.RED)
+def install_frontend_dependencies(frontend_type):
+    """Install frontend dependencies based on type"""
+    if frontend_type == 'next':
+        # Check if Node.js is installed
+        try:
+            result = subprocess.run(['node', '--version'], capture_output=True, text=True)
+            if result.returncode != 0:
+                print_colored("❌ Node.js is not installed. Please install Node.js first.", Colors.RED)
+                print_colored("Visit: https://nodejs.org/en/download/", Colors.YELLOW)
+                return False
+        except FileNotFoundError:
+            print_colored("❌ Node.js is not installed. Please install Node.js first.", Colors.RED)
+            print_colored("Visit: https://nodejs.org/en/download/", Colors.YELLOW)
             return False
+        
+        # Check if npm is installed
+        try:
+            result = subprocess.run(['npm', '--version'], capture_output=True, text=True)
+            if result.returncode != 0:
+                print_colored("❌ npm is not installed. Please install npm first.", Colors.RED)
+                return False
+        except FileNotFoundError:
+            print_colored("❌ npm is not installed. Please install npm first.", Colors.RED)
+            return False
+        
+        # Check if Next.js dependencies are installed
+        frontend_dir = Path("frontend-next")
+        node_modules = frontend_dir / "node_modules"
+        
+        if not node_modules.exists():
+            print_colored("📦 Installing Next.js dependencies...", Colors.YELLOW)
+            result = subprocess.run(['npm', 'install'], cwd=frontend_dir, capture_output=True, text=True)
+            
+            if result.returncode == 0:
+                print_colored("✅ Next.js dependencies installed", Colors.GREEN)
+                return True
+            else:
+                print_colored(f"❌ Failed to install Next.js dependencies: {result.stderr}", Colors.RED)
+                return False
+        return True
+    else:
+        # Python frontend dependencies
+        try:
+            import requests
+            return True
+        except ImportError:
+            print_colored("📦 Installing Python frontend dependencies...", Colors.YELLOW)
+            result = subprocess.run([sys.executable, "-m", "pip", "install", "requests"], 
+                                  capture_output=True, text=True)
+            
+            if result.returncode == 0:
+                print_colored("✅ Python frontend dependencies installed", Colors.GREEN)
+                return True
+            else:
+                print_colored(f"❌ Failed to install Python frontend dependencies: {result.stderr}", Colors.RED)
+                return False
 
 def start_backend():
     """Start backend application"""
@@ -185,7 +237,8 @@ def start_backend():
             cwd=backend_dir,
             stdout=log_file,
             stderr=subprocess.STDOUT,
-            text=True
+            text=True,
+            env={**os.environ, 'PYTHONPATH': '.'}
         )
     
     # Wait for backend to start with appropriate messaging
@@ -218,47 +271,85 @@ def start_backend():
     print_colored("   tail -f backend.log", Colors.YELLOW)
     return False
 
-def start_frontend():
-    """Start frontend application"""
+def start_frontend(frontend_type):
+    """Start frontend application based on type"""
     global frontend_process
     
-    print_colored("🌐 Starting frontend application...", Colors.BLUE)
-    
-    frontend_log = Path("frontend.log")
-    
-    with open(frontend_log, 'w') as log_file:
-        frontend_process = subprocess.Popen(
-            [sys.executable, "frontend_app.py"],
-            cwd="frontend",
-            stdout=log_file,
-            stderr=subprocess.STDOUT,
-            text=True
-        )
-    
-    # Wait for frontend to start
-    print_colored("⏳ Waiting for frontend to start...", Colors.YELLOW)
-    time.sleep(3)
-    
-    # Check if frontend is responding
-    for _ in range(10):  # Try for 10 seconds
-        try:
-            response = requests.get("http://localhost:5000", timeout=1)
-            if response.status_code == 200:
-                print_colored("✅ Frontend started successfully on http://localhost:5000", Colors.GREEN)
-                return True
-        except requests.RequestException:
-            time.sleep(1)
-    
-    print_colored("❌ Frontend failed to start. Check frontend.log for details.", Colors.RED)
-    return False
+    if frontend_type == 'next':
+        print_colored("🌐 Starting Next.js frontend application...", Colors.BLUE)
+        
+        frontend_log = Path("frontend.log")
+        frontend_dir = Path("frontend-next")
+        
+        with open(frontend_log, 'w') as log_file:
+            frontend_process = subprocess.Popen(
+                ["npm", "run", "dev"],
+                cwd=frontend_dir,
+                stdout=log_file,
+                stderr=subprocess.STDOUT,
+                text=True
+            )
+        
+        # Wait for Next.js to start
+        print_colored("⏳ Waiting for Next.js to start...", Colors.YELLOW)
+        time.sleep(8)
+        
+        # Check if Next.js is responding
+        frontend_url = "http://localhost:4000"
+        max_retries = 10
+        for retry in range(max_retries):
+            try:
+                response = requests.get(frontend_url, timeout=2)
+                if response.status_code == 200:
+                    print_colored(f"✅ Next.js frontend started successfully on {frontend_url}", Colors.GREEN)
+                    return True
+            except requests.RequestException:
+                if retry < max_retries - 1:
+                    print_colored(f"⏳ Next.js still starting... (attempt {retry + 1}/{max_retries})", Colors.YELLOW)
+                    time.sleep(3)
+        
+        print_colored("❌ Next.js frontend failed to start. Check frontend.log for details.", Colors.RED)
+        return False
+    else:
+        print_colored("🌐 Starting Python Flask frontend application...", Colors.BLUE)
+        
+        frontend_log = Path("frontend.log")
+        
+        with open(frontend_log, 'w') as log_file:
+            frontend_process = subprocess.Popen(
+                [sys.executable, "frontend_app.py"],
+                cwd="frontend",
+                stdout=log_file,
+                stderr=subprocess.STDOUT,
+                text=True
+            )
+        
+        # Wait for Flask to start
+        print_colored("⏳ Waiting for Flask frontend to start...", Colors.YELLOW)
+        time.sleep(3)
+        
+        # Check if Flask is responding
+        frontend_url = "http://localhost:5000"
+        for _ in range(10):  # Try for 10 seconds
+            try:
+                response = requests.get(frontend_url, timeout=1)
+                if response.status_code == 200:
+                    print_colored(f"✅ Flask frontend started successfully on {frontend_url}", Colors.GREEN)
+                    return True
+            except requests.RequestException:
+                time.sleep(1)
+        
+        print_colored("❌ Flask frontend failed to start. Check frontend.log for details.", Colors.RED)
+        return False
 
 def main():
     """Main function to orchestrate application startup"""
-    global refresh_data
+    global refresh_data, frontend_type
     
     # Parse arguments
     args = parse_arguments()
     refresh_data = args.refresh
+    frontend_type = args.frontend
     
     # Set up signal handlers
     signal.signal(signal.SIGINT, signal_handler)
@@ -268,6 +359,8 @@ def main():
     
     if refresh_data:
         print_colored("🔄 Data refresh mode enabled - will reload all data from CSV", Colors.YELLOW)
+    
+    print_colored(f"📱 Frontend: {frontend_type.upper()}", Colors.BLUE)
     
     # Check Docker
     if not check_docker():
@@ -285,7 +378,7 @@ def main():
     if not install_backend_dependencies():
         sys.exit(1)
     
-    if not install_frontend_dependencies():
+    if not install_frontend_dependencies(frontend_type):
         sys.exit(1)
     
     # Start backend
@@ -294,7 +387,7 @@ def main():
         sys.exit(1)
     
     # Start frontend
-    if not start_frontend():
+    if not start_frontend(frontend_type):
         cleanup_processes()
         sys.exit(1)
     
@@ -302,7 +395,12 @@ def main():
     print_colored("🎉 All applications are running successfully!", Colors.GREEN)
     print_colored("┌─────────────────────────────────────────────────────┐", Colors.BLUE)
     print_colored("│                                                     │", Colors.BLUE)
-    print_colored("│  🌐 Frontend:  http://localhost:5000               │", Colors.BLUE)
+    
+    if frontend_type == 'next':
+        print_colored("│  🌐 Frontend:  http://localhost:4000 (Next.js)     │", Colors.BLUE)
+    else:
+        print_colored("│  🌐 Frontend:  http://localhost:5000 (Flask)       │", Colors.BLUE)
+    
     print_colored("│  🔧 Backend:   http://localhost:5001               │", Colors.BLUE)
     print_colored("│  🐳 MySQL:     localhost:3306                      │", Colors.BLUE)
     print_colored("│                                                     │", Colors.BLUE)
@@ -314,6 +412,8 @@ def main():
         print_colored("│  🔄 Data was refreshed from CSV                     │", Colors.BLUE)
         print_colored("│                                                     │", Colors.BLUE)
     
+    print_colored(f"│  Frontend Type: {frontend_type.upper():<31}│", Colors.BLUE)
+    print_colored("│                                                     │", Colors.BLUE)
     print_colored("│  Press Ctrl+C to stop all applications             │", Colors.BLUE)
     print_colored("│                                                     │", Colors.BLUE)
     print_colored("└─────────────────────────────────────────────────────┘", Colors.BLUE)

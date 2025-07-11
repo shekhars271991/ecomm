@@ -6,9 +6,6 @@ Aerospike Manager connected successfully!
 ✅ Successfully logged aerospike query
 ✅ Initialized Aerospike with 6 categories and 6 products
 Unified Database Manager initialized successfully
-📊 Logging mysql query: DELETE: DELETE FROM cart (cleared 1 items on startup)...
-✅ Successfully logged mysql query
-✅ Cleared 1 cart items on startup
 ✅ Database already contains 19 categories and 1740 products - skipping data load
 ✅ Database initialization complete
 🚀 Starting Flask application...
@@ -22,25 +19,48 @@ Unified Database Manager initialized successfully
  * Restarting with stat
  * Debugger is active!
  * Debugger PIN: 318-484-797
-127.0.0.1 - - [11/Jul/2025 10:02:17] "GET /api/categories HTTP/1.1" 200 -
-127.0.0.1 - - [11/Jul/2025 10:02:20] "GET /api/categories HTTP/1.1" 200 -
-127.0.0.1 - - [11/Jul/2025 10:02:21] "GET /api/products HTTP/1.1" 200 -
-127.0.0.1 - - [11/Jul/2025 10:02:21] "GET /api/cart?session_id=f78e5d77-da43-4aeb-be47-f395a8956512 HTTP/1.1" 200 -
-127.0.0.1 - - [11/Jul/2025 10:02:26] "GET /api/categories HTTP/1.1" 200 -
-127.0.0.1 - - [11/Jul/2025 10:02:27] "GET /api/products HTTP/1.1" 200 -
-127.0.0.1 - - [11/Jul/2025 10:02:27] "GET /api/cart?session_id=56cab8eb-f5a0-48a6-8c9e-fe66ee7a923a HTTP/1.1" 200 -
-127.0.0.1 - - [11/Jul/2025 10:02:27] "GET /api/db-logs HTTP/1.1" 200 -
-127.0.0.1 - - [11/Jul/2025 10:02:27] "GET /api/database-switch HTTP/1.1" 200 -
-127.0.0.1 - - [11/Jul/2025 10:06:55] "GET /api/products HTTP/1.1" 200 -
-127.0.0.1 - - [11/Jul/2025 10:06:55] "GET /api/categories HTTP/1.1" 200 -
-127.0.0.1 - - [11/Jul/2025 10:06:55] "GET /api/cart?session_id=56cab8eb-f5a0-48a6-8c9e-fe66ee7a923a HTTP/1.1" 200 -
-127.0.0.1 - - [11/Jul/2025 10:06:56] "GET /api/database-switch HTTP/1.1" 200 -
-127.0.0.1 - - [11/Jul/2025 10:06:56] "GET /api/db-logs HTTP/1.1" 200 -
-127.0.0.1 - - [11/Jul/2025 10:06:59] "GET /api/db-logs HTTP/1.1" 200 -
-127.0.0.1 - - [11/Jul/2025 10:07:03] "POST /api/database-switch HTTP/1.1" 200 -
-127.0.0.1 - - [11/Jul/2025 10:07:04] "GET /api/products HTTP/1.1" 200 -
-127.0.0.1 - - [11/Jul/2025 10:07:04] "GET /api/categories HTTP/1.1" 200 -
-127.0.0.1 - - [11/Jul/2025 10:07:04] "GET /api/cart?session_id=56cab8eb-f5a0-48a6-8c9e-fe66ee7a923a HTTP/1.1" 200 -
-127.0.0.1 - - [11/Jul/2025 10:07:05] "GET /api/database-switch HTTP/1.1" 200 -
-127.0.0.1 - - [11/Jul/2025 10:07:05] "GET /api/db-logs HTTP/1.1" 200 -
-127.0.0.1 - - [11/Jul/2025 10:43:35] "GET /api/db-logs?database_type=aerospike HTTP/1.1" 200 -
+127.0.0.1 - - [11/Jul/2025 12:03:56] "GET /api/categories HTTP/1.1" 200 -
+127.0.0.1 - - [11/Jul/2025 12:05:24] "GET /api/cart?session_id=session_oshl5tfnimcyg01zr HTTP/1.1" 200 -
+127.0.0.1 - - [11/Jul/2025 12:05:24] "GET /api/categories?session_id=session_oshl5tfnimcyg01zr HTTP/1.1" 200 -
+127.0.0.1 - - [11/Jul/2025 12:05:26] "GET /api/products?session_id=session_oshl5tfnimcyg01zr HTTP/1.1" 200 -
+127.0.0.1 - - [11/Jul/2025 12:06:52] "GET /api/categories HTTP/1.1" 200 -
+127.0.0.1 - - [11/Jul/2025 12:08:21] "GET /api/products?category=2&session_id=session_oshl5tfnimcyg01zr HTTP/1.1" 200 -
+127.0.0.1 - - [11/Jul/2025 12:08:39] "OPTIONS /api/cart?session_id=session_oshl5tfnimcyg01zr HTTP/1.1" 200 -
+127.0.0.1 - - [11/Jul/2025 12:08:39] "[31m[1mPOST /api/cart?session_id=session_oshl5tfnimcyg01zr HTTP/1.1[0m" 400 -
+127.0.0.1 - - [11/Jul/2025 12:09:24] "GET /api/database-switch?session_id=session_oshl5tfnimcyg01zr HTTP/1.1" 200 -
+127.0.0.1 - - [11/Jul/2025 12:10:17] "OPTIONS /api/database-switch?session_id=session_oshl5tfnimcyg01zr HTTP/1.1" 200 -
+127.0.0.1 - - [11/Jul/2025 12:10:17] "POST /api/database-switch?session_id=session_oshl5tfnimcyg01zr HTTP/1.1" 200 -
+127.0.0.1 - - [11/Jul/2025 12:10:17] "GET /api/database-switch?session_id=session_oshl5tfnimcyg01zr HTTP/1.1" 200 -
+127.0.0.1 - - [11/Jul/2025 12:10:18] "GET /api/cart?session_id=session_oshl5tfnimcyg01zr HTTP/1.1" 200 -
+127.0.0.1 - - [11/Jul/2025 12:10:18] "GET /api/categories HTTP/1.1" 200 -
+127.0.0.1 - - [11/Jul/2025 12:10:18] "GET /api/products?session_id=session_oshl5tfnimcyg01zr HTTP/1.1" 200 -
+127.0.0.1 - - [11/Jul/2025 12:10:32] "OPTIONS /api/database-switch?session_id=session_oshl5tfnimcyg01zr HTTP/1.1" 200 -
+127.0.0.1 - - [11/Jul/2025 12:10:32] "POST /api/database-switch?session_id=session_oshl5tfnimcyg01zr HTTP/1.1" 200 -
+127.0.0.1 - - [11/Jul/2025 12:10:32] "GET /api/database-switch?session_id=session_oshl5tfnimcyg01zr HTTP/1.1" 200 -
+127.0.0.1 - - [11/Jul/2025 12:10:32] "GET /api/cart?session_id=session_oshl5tfnimcyg01zr HTTP/1.1" 200 -
+127.0.0.1 - - [11/Jul/2025 12:10:32] "GET /api/categories HTTP/1.1" 200 -
+127.0.0.1 - - [11/Jul/2025 12:10:33] "GET /api/products?session_id=session_oshl5tfnimcyg01zr HTTP/1.1" 200 -
+127.0.0.1 - - [11/Jul/2025 12:12:56] "GET /api/products?category=10&session_id=session_oshl5tfnimcyg01zr HTTP/1.1" 200 -
+127.0.0.1 - - [11/Jul/2025 12:14:24] "GET /api/database-switch?session_id=session_oshl5tfnimcyg01zr HTTP/1.1" 200 -
+127.0.0.1 - - [11/Jul/2025 12:14:24] "GET /api/cart?session_id=session_oshl5tfnimcyg01zr HTTP/1.1" 200 -
+127.0.0.1 - - [11/Jul/2025 12:14:24] "GET /api/categories HTTP/1.1" 200 -
+127.0.0.1 - - [11/Jul/2025 12:14:26] "GET /api/products?session_id=session_oshl5tfnimcyg01zr HTTP/1.1" 200 -
+127.0.0.1 - - [11/Jul/2025 12:14:40] "OPTIONS /api/database-switch?session_id=session_oshl5tfnimcyg01zr HTTP/1.1" 200 -
+127.0.0.1 - - [11/Jul/2025 12:14:40] "POST /api/database-switch?session_id=session_oshl5tfnimcyg01zr HTTP/1.1" 200 -
+127.0.0.1 - - [11/Jul/2025 12:14:41] "GET /api/database-switch?session_id=session_oshl5tfnimcyg01zr HTTP/1.1" 200 -
+127.0.0.1 - - [11/Jul/2025 12:14:41] "GET /api/cart?session_id=session_oshl5tfnimcyg01zr HTTP/1.1" 200 -
+127.0.0.1 - - [11/Jul/2025 12:14:41] "GET /api/categories HTTP/1.1" 200 -
+127.0.0.1 - - [11/Jul/2025 12:14:41] "GET /api/products?session_id=session_oshl5tfnimcyg01zr HTTP/1.1" 200 -
+127.0.0.1 - - [11/Jul/2025 12:14:58] "GET /api/products?category=4&session_id=session_oshl5tfnimcyg01zr HTTP/1.1" 200 -
+127.0.0.1 - - [11/Jul/2025 12:15:03] "OPTIONS /api/cart?session_id=session_oshl5tfnimcyg01zr HTTP/1.1" 200 -
+127.0.0.1 - - [11/Jul/2025 12:15:03] "[31m[1mPOST /api/cart?session_id=session_oshl5tfnimcyg01zr HTTP/1.1[0m" 400 -
+127.0.0.1 - - [11/Jul/2025 12:18:53] "GET /api/db-logs HTTP/1.1" 200 -
+127.0.0.1 - - [11/Jul/2025 12:18:54] "GET /api/db-logs HTTP/1.1" 200 -
+127.0.0.1 - - [11/Jul/2025 12:18:57] "GET /api/db-logs?database_type=mysql HTTP/1.1" 200 -
+127.0.0.1 - - [11/Jul/2025 12:18:58] "GET /api/db-logs?database_type=aerospike HTTP/1.1" 200 -
+127.0.0.1 - - [11/Jul/2025 12:19:00] "OPTIONS /api/db-logs?database_type=aerospike HTTP/1.1" 200 -
+127.0.0.1 - - [11/Jul/2025 12:19:00] "DELETE /api/db-logs?database_type=aerospike HTTP/1.1" 200 -
+127.0.0.1 - - [11/Jul/2025 12:19:03] "GET /api/db-logs?database_type=mysql HTTP/1.1" 200 -
+127.0.0.1 - - [11/Jul/2025 12:19:05] "OPTIONS /api/db-logs?database_type=mysql HTTP/1.1" 200 -
+127.0.0.1 - - [11/Jul/2025 12:19:05] "DELETE /api/db-logs?database_type=mysql HTTP/1.1" 200 -
+127.0.0.1 - - [11/Jul/2025 12:19:06] "GET /api/db-logs HTTP/1.1" 200 -

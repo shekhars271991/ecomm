@@ -9,6 +9,7 @@ NC='\033[0m' # No Color
 
 # Parse command line arguments
 REFRESH_DATA=false
+FRONTEND_TYPE="next"  # Default to Next.js
 HELP=false
 
 while [[ $# -gt 0 ]]; do
@@ -16,6 +17,10 @@ while [[ $# -gt 0 ]]; do
         -r|--refresh)
             REFRESH_DATA=true
             shift
+            ;;
+        -f|--frontend)
+            FRONTEND_TYPE="$2"
+            shift 2
             ;;
         -h|--help)
             HELP=true
@@ -37,15 +42,26 @@ if [[ "$HELP" == true ]]; then
     echo "Usage: $0 [OPTIONS]"
     echo ""
     echo "Options:"
-    echo "  -r, --refresh    Force refresh all data from CSV (truncates existing data)"
-    echo "  -h, --help       Show this help message"
+    echo "  -r, --refresh           Force refresh all data from CSV (truncates existing data)"
+    echo "  -f, --frontend TYPE     Choose frontend type: 'next' (default) or 'python'"
+    echo "  -h, --help              Show this help message"
     echo ""
     echo "Examples:"
-    echo "  $0               # Normal startup (skip data load if data exists)"
-    echo "  $0 -r            # Force refresh all data"
-    echo "  $0 --refresh     # Force refresh all data (long form)"
+    echo "  $0                      # Normal startup with Next.js frontend"
+    echo "  $0 -f python            # Use Python Flask frontend"
+    echo "  $0 -f next              # Use Next.js frontend (default)"
+    echo "  $0 -r                   # Force refresh all data with Next.js frontend"
+    echo "  $0 -r -f python         # Force refresh data with Python frontend"
+    echo "  $0 --refresh --frontend next  # Force refresh with Next.js frontend"
     echo ""
     exit 0
+fi
+
+# Validate frontend type
+if [[ "$FRONTEND_TYPE" != "next" && "$FRONTEND_TYPE" != "python" ]]; then
+    echo -e "${RED}❌ Invalid frontend type: $FRONTEND_TYPE${NC}"
+    echo -e "${YELLOW}Valid options: 'next' or 'python'${NC}"
+    exit 1
 fi
 
 # Function to cleanup processes on exit
@@ -64,9 +80,10 @@ cleanup() {
         kill $FRONTEND_PID 2>/dev/null
     fi
     
-    # Kill any remaining python processes related to our apps
+    # Kill any remaining python/node processes related to our apps
     pkill -f "python.*backend/app.py" 2>/dev/null
     pkill -f "python.*frontend/frontend_app.py" 2>/dev/null
+    pkill -f "node.*next.*dev" 2>/dev/null
     
     echo -e "${GREEN}Applications stopped successfully!${NC}"
     exit 0
@@ -80,6 +97,8 @@ echo -e "${GREEN}🚀 Starting Grocery Delivery App...${NC}"
 if [[ "$REFRESH_DATA" == true ]]; then
     echo -e "${YELLOW}🔄 Data refresh mode enabled - will reload all data from CSV${NC}"
 fi
+
+echo -e "${BLUE}📱 Frontend: $(echo $FRONTEND_TYPE | tr '[:lower:]' '[:upper:]')${NC}"
 
 # Check if Docker is running
 if ! docker info > /dev/null 2>&1; then
@@ -108,11 +127,36 @@ if [[ ! -d "backend/venv" ]] && [[ ! -f "backend/.venv_created" ]]; then
     echo -e "${GREEN}✅ Backend dependencies installed${NC}"
 fi
 
-# Check if frontend dependencies are installed
-if ! python -c "import requests" 2>/dev/null; then
-    echo -e "${YELLOW}📦 Installing frontend dependencies...${NC}"
-    pip install requests
-    echo -e "${GREEN}✅ Frontend dependencies installed${NC}"
+# Frontend-specific dependency checks and setup
+if [[ "$FRONTEND_TYPE" == "next" ]]; then
+    # Check if Node.js is installed
+    if ! command -v node &> /dev/null; then
+        echo -e "${RED}❌ Node.js is not installed. Please install Node.js first.${NC}"
+        echo -e "${YELLOW}Visit: https://nodejs.org/en/download/${NC}"
+        exit 1
+    fi
+    
+    # Check if npm is installed
+    if ! command -v npm &> /dev/null; then
+        echo -e "${RED}❌ npm is not installed. Please install npm first.${NC}"
+        exit 1
+    fi
+    
+    # Check if Next.js dependencies are installed
+    if [[ ! -d "frontend-next/node_modules" ]]; then
+        echo -e "${YELLOW}📦 Installing Next.js dependencies...${NC}"
+        cd frontend-next
+        npm install
+        cd ..
+        echo -e "${GREEN}✅ Next.js dependencies installed${NC}"
+    fi
+else
+    # Check if Python frontend dependencies are installed
+    if ! python -c "import requests" 2>/dev/null; then
+        echo -e "${YELLOW}📦 Installing Python frontend dependencies...${NC}"
+        pip install requests
+        echo -e "${GREEN}✅ Python frontend dependencies installed${NC}"
+    fi
 fi
 
 echo -e "${BLUE}🔧 Starting backend API server...${NC}"
@@ -167,26 +211,67 @@ if [ $RETRY_COUNT -eq $MAX_RETRIES ]; then
     exit 1
 fi
 
-echo -e "${BLUE}🌐 Starting frontend application...${NC}"
-cd frontend && python frontend_app.py > ../frontend.log 2>&1 &
-FRONTEND_PID=$!
-
-# Wait for frontend to start
-echo -e "${YELLOW}⏳ Waiting for frontend to start...${NC}"
-sleep 3
-
-# Check if frontend is responding
-if curl -s http://localhost:5000 > /dev/null 2>&1; then
-    echo -e "${GREEN}✅ Frontend started successfully on http://localhost:5000${NC}"
+# Start the appropriate frontend
+if [[ "$FRONTEND_TYPE" == "next" ]]; then
+    echo -e "${BLUE}🌐 Starting Next.js frontend application...${NC}"
+    cd frontend-next && npm run dev > ../frontend.log 2>&1 &
+    FRONTEND_PID=$!
+    cd ..
+    
+    # Wait for Next.js to start
+    echo -e "${YELLOW}⏳ Waiting for Next.js to start...${NC}"
+    sleep 8
+    
+    # Check if Next.js is responding
+    FRONTEND_URL="http://localhost:4000"
+    MAX_FRONTEND_RETRIES=10
+    FRONTEND_RETRY_COUNT=0
+    
+    while [ $FRONTEND_RETRY_COUNT -lt $MAX_FRONTEND_RETRIES ]; do
+        if curl -s $FRONTEND_URL > /dev/null 2>&1; then
+            echo -e "${GREEN}✅ Next.js frontend started successfully on $FRONTEND_URL${NC}"
+            break
+        else
+            FRONTEND_RETRY_COUNT=$((FRONTEND_RETRY_COUNT + 1))
+            if [ $FRONTEND_RETRY_COUNT -lt $MAX_FRONTEND_RETRIES ]; then
+                echo -e "${YELLOW}⏳ Next.js still starting... (attempt $FRONTEND_RETRY_COUNT/$MAX_FRONTEND_RETRIES)${NC}"
+                sleep 3
+            fi
+        fi
+    done
+    
+    if [ $FRONTEND_RETRY_COUNT -eq $MAX_FRONTEND_RETRIES ]; then
+        echo -e "${RED}❌ Next.js frontend failed to start. Check frontend.log for details.${NC}"
+        exit 1
+    fi
 else
-    echo -e "${RED}❌ Frontend failed to start. Check frontend.log for details.${NC}"
-    exit 1
+    echo -e "${BLUE}🌐 Starting Python Flask frontend application...${NC}"
+    cd frontend && python frontend_app.py > ../frontend.log 2>&1 &
+    FRONTEND_PID=$!
+    cd ..
+    
+    # Wait for Flask to start
+    echo -e "${YELLOW}⏳ Waiting for Flask frontend to start...${NC}"
+    sleep 3
+    
+    # Check if Flask is responding
+    FRONTEND_URL="http://localhost:5000"
+    if curl -s $FRONTEND_URL > /dev/null 2>&1; then
+        echo -e "${GREEN}✅ Flask frontend started successfully on $FRONTEND_URL${NC}"
+    else
+        echo -e "${RED}❌ Flask frontend failed to start. Check frontend.log for details.${NC}"
+        exit 1
+    fi
 fi
 
 echo -e "${GREEN}🎉 All applications are running successfully!${NC}"
 echo -e "${BLUE}┌─────────────────────────────────────────────────────┐${NC}"
 echo -e "${BLUE}│                                                     │${NC}"
-echo -e "${BLUE}│  🌐 Frontend:  http://localhost:5000               │${NC}"
+if [[ "$FRONTEND_TYPE" == "next" ]]; then
+echo -e "${BLUE}│  🌐 Frontend:  http://localhost:4000 (Next.js)     │${NC}"
+else
+echo -e "${BLUE}│  🌐 Frontend:  http://localhost:5000 (Flask)       │${NC}"
+fi
 echo -e "${BLUE}│  🔧 Backend:   http://localhost:5001               │${NC}"
 echo -e "${BLUE}│  🐳 MySQL:     localhost:3306                      │${NC}"
 echo -e "${BLUE}│                                                     │${NC}"
@@ -197,6 +282,8 @@ if [[ "$REFRESH_DATA" == true ]]; then
 echo -e "${BLUE}│  🔄 Data was refreshed from CSV                     │${NC}"
 echo -e "${BLUE}│                                                     │${NC}"
 fi
+echo -e "${BLUE}│  Frontend Type: $(printf "%-31s" "$(echo $FRONTEND_TYPE | tr '[:lower:]' '[:upper:]')")│${NC}"
+echo -e "${BLUE}│                                                     │${NC}"
 echo -e "${BLUE}│  Press Ctrl+C to stop all applications             │${NC}"
 echo -e "${BLUE}│                                                     │${NC}"
 echo -e "${BLUE}└─────────────────────────────────────────────────────┘${NC}"
