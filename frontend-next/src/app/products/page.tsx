@@ -22,6 +22,7 @@ export default function ProductsPage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [quantities, setQuantities] = useState<Record<number, number>>({})
   const [currentDatabase, setCurrentDatabase] = useState<string>('mysql')
+  const [isHydrated, setIsHydrated] = useState(false)
   const [showDatabaseDropdown, setShowDatabaseDropdown] = useState(false)
   const [showQueryLog, setShowQueryLog] = useState(false)
   const [activeLogTab, setActiveLogTab] = useState<'db' | 'api'>('db')
@@ -128,6 +129,8 @@ export default function ProductsPage() {
     try {
       await apiService.switchDatabase(database)
       setCurrentDatabase(database)
+      // Persist to localStorage
+      localStorage.setItem('selectedDatabase', database)
       toast.success(`Switched to ${database.toUpperCase()} database`)
       window.location.reload()
     } catch (error) {
@@ -229,6 +232,33 @@ export default function ProductsPage() {
     }
   }, [showQueryLog, queryFilter])
 
+  // Handle hydration and sync database state
+  useEffect(() => {
+    // Set hydration flag
+    setIsHydrated(true)
+    
+    // Initialize from localStorage after hydration
+    const localDatabase = localStorage.getItem('selectedDatabase') || 'mysql'
+    setCurrentDatabase(localDatabase as 'mysql' | 'aerospike')
+    
+    // Sync with backend
+    const syncDatabaseState = async () => {
+      try {
+        const dbInfo = await apiService.getCurrentDatabase()
+        const backendDatabase = dbInfo.current_database
+        
+        // If backend and local storage don't match, update backend to match local preference
+        if (backendDatabase !== localDatabase) {
+          await apiService.switchDatabase(localDatabase as 'mysql' | 'aerospike')
+        }
+      } catch (error) {
+        console.error('Failed to sync database state:', error)
+      }
+    }
+    
+    syncDatabaseState()
+  }, [])
+
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (showDatabaseDropdown) {
@@ -293,7 +323,7 @@ export default function ProductsPage() {
                   }}
                 >
                   <Database className="w-3 h-3" />
-                  <span>{currentDatabase.toUpperCase()}</span>
+                  <span>{isHydrated ? currentDatabase.toUpperCase() : 'MYSQL'}</span>
                   <ChevronDown className="w-3 h-3" />
                 </button>
                 
@@ -310,7 +340,7 @@ export default function ProductsPage() {
                         setShowDatabaseDropdown(false)
                       }}
                       className={`w-full text-left px-3 py-2 rounded-lg transition-colors ${
-                        currentDatabase === 'mysql' ? 'bg-primary-100 text-primary-700' : 'hover:bg-neutral-100'
+                        (isHydrated ? currentDatabase : 'mysql') === 'mysql' ? 'bg-primary-100 text-primary-700' : 'hover:bg-neutral-100'
                       }`}
                     >
                       <div className="flex items-center space-x-2">
@@ -327,7 +357,7 @@ export default function ProductsPage() {
                         setShowDatabaseDropdown(false)
                       }}
                       className={`w-full text-left px-3 py-2 rounded-lg transition-colors ${
-                        currentDatabase === 'aerospike' ? 'bg-primary-100 text-primary-700' : 'hover:bg-neutral-100'
+                        (isHydrated ? currentDatabase : 'mysql') === 'aerospike' ? 'bg-primary-100 text-primary-700' : 'hover:bg-neutral-100'
                       }`}
                     >
                       <div className="flex items-center space-x-2">
@@ -580,7 +610,7 @@ export default function ProductsPage() {
                 <div>
                   <h2 className="text-2xl font-bold text-neutral-800">Logs</h2>
                   <div className="flex items-center space-x-4">
-                    <p className="text-neutral-600">Current Database: <span className="font-medium text-primary-600">{currentDatabase.toUpperCase()}</span></p>
+                    <p className="text-neutral-600">Current Database: <span className="font-medium text-primary-600">{isHydrated ? currentDatabase.toUpperCase() : 'MYSQL'}</span></p>
                     <a
                       href="/data-models"
                       target="_blank"
@@ -810,7 +840,7 @@ export default function ProductsPage() {
               <div className="p-6 border-t border-neutral-200 bg-neutral-50">
                 <div className="flex items-center justify-between">
                   <div className="text-sm text-neutral-600">
-                    Current Database: <span className="font-medium text-primary-600">{currentDatabase.toUpperCase()}</span>
+                    Current Database: <span className="font-medium text-primary-600">{isHydrated ? currentDatabase.toUpperCase() : 'MYSQL'}</span>
                   </div>
                   <button
                     onClick={() => setShowQueryLog(false)}
@@ -1002,7 +1032,7 @@ export default function ProductsPage() {
                   className="flex items-center space-x-3 text-lg w-full text-left"
                 >
                   <Database className="w-5 h-5" />
-                  <span>Database: {currentDatabase.toUpperCase()}</span>
+                  <span>Database: {isHydrated ? currentDatabase.toUpperCase() : 'MYSQL'}</span>
                 </button>
                 <button
                   onClick={() => {

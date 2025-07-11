@@ -17,12 +17,12 @@ const poppins = Poppins({
 })
 
 export const metadata: Metadata = {
-  title: 'QuickGrocery - Fast Grocery Delivery',
-  description: 'Get fresh groceries delivered to your doorstep in minutes. Browse thousands of products from fruits to household essentials.',
-  keywords: ['grocery', 'delivery', 'online shopping', 'fresh food', 'quick delivery'],
-  authors: [{ name: 'QuickGrocery Team' }],
-  creator: 'QuickGrocery',
-  publisher: 'QuickGrocery',
+  title: 'QuickGrocery - MySQL vs Aerospike Demo',
+  description: 'Experience the performance difference between MySQL and Aerospike in a real-world grocery delivery application.',
+  keywords: ['aerospike', 'mysql', 'nosql', 'database', 'performance', 'demo', 'grocery', 'real-time'],
+  authors: [{ name: 'Database Demo Team' }],
+  creator: 'Database Demo',
+  publisher: 'Database Demo',
   formatDetection: {
     email: false,
     address: false,
@@ -35,12 +35,10 @@ export const metadata: Metadata = {
     userScalable: false,
   },
   icons: {
-    icon: '/favicon.ico',
-    shortcut: '/favicon-16x16.png',
-    apple: '/apple-touch-icon.png',
+    icon: '/logos/aerospike-logo-yellow.webp',
   },
   manifest: '/site.webmanifest',
-  themeColor: '#f1730c',
+  themeColor: '#FFD700',
 }
 
 export default function RootLayout({

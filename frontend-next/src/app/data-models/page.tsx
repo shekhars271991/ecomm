@@ -163,8 +163,9 @@ export default function DataModelsPage() {
                 </div>
               </div>
               <div className="flex flex-wrap gap-2">
+                <span className="bg-red-100 text-red-700 px-2 py-1 rounded-full text-xs font-medium">ACID Compliant</span>
                 <span className="bg-red-100 text-red-700 px-2 py-1 rounded-full text-xs font-medium">Key-Value</span>
-                <span className="bg-red-100 text-red-700 px-2 py-1 rounded-full text-xs font-medium">In-Memory</span>
+                <span className="bg-red-100 text-red-700 px-2 py-1 rounded-full text-xs font-medium">Hybrid Memory</span>
                 <span className="bg-red-100 text-red-700 px-2 py-1 rounded-full text-xs font-medium">Schema-less</span>
               </div>
             </div>
