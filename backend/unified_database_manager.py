@@ -1,6 +1,7 @@
 from typing import Dict, List, Optional, Any
 from mysql_manager import MySQLManager
 from aerospike_manager import AerospikeManager
+from mongo_manager import MongoManager
 
 
 class UnifiedDatabaseManager:
@@ -10,28 +11,30 @@ class UnifiedDatabaseManager:
         self.current_db = 'mysql'  # Default to MySQL
         self.mysql_manager = MySQLManager(app, db)
         self.aerospike_manager = AerospikeManager(app)
+        self.mongo_manager = MongoManager(app)
         
     def initialize(self, app, db, db_tracker, models=None):
-        """Initialize both database managers"""
+        """Initialize all database managers"""
         self.app = app
         self.db = db
         
-        # Initialize both managers
+        # Initialize all managers
         self.mysql_manager.initialize(app, db, db_tracker, models)
         self.aerospike_manager.initialize(app, db_tracker)
+        self.mongo_manager.initialize(app, db_tracker)
         
         # Note: Sample data initialization removed to prevent overriding CSV data
-        # Sample data will only be initialized when explicitly switching to Aerospike
+        # Sample data will only be initialized when explicitly switching to databases
         
         print("Unified Database Manager initialized successfully")
     
     def set_database(self, db_type: str):
-        """Switch between MySQL and Aerospike"""
-        if db_type in ['mysql', 'aerospike']:
+        """Switch between MySQL, Aerospike, and MongoDB"""
+        if db_type in ['mysql', 'aerospike', 'mongodb']:
             self.current_db = db_type
             print(f"Switched to {db_type} database")
         else:
-            raise ValueError("Database type must be 'mysql' or 'aerospike'")
+            raise ValueError("Database type must be 'mysql', 'aerospike', or 'mongodb'")
     
     def get_current_database(self):
         """Get current database type"""
@@ -41,8 +44,10 @@ class UnifiedDatabaseManager:
         """Get the current active database manager"""
         if self.current_db == 'mysql':
             return self.mysql_manager
-        else:
+        elif self.current_db == 'aerospike':
             return self.aerospike_manager
+        else:  # mongodb
+            return self.mongo_manager
     
     # Category operations
     def get_all_categories(self) -> List[Dict]:
@@ -60,7 +65,7 @@ class UnifiedDatabaseManager:
     
     # Cart operations
     def get_cart_items(self, session_id: str) -> List[Dict]:
-        """Get cart items from current database"""
+        """Get cart items for a session from current database"""
         return self.get_current_manager().get_cart_items(session_id)
     
     def add_to_cart(self, session_id: str, product_id: int, quantity: int = 1) -> Dict:
@@ -68,7 +73,7 @@ class UnifiedDatabaseManager:
         return self.get_current_manager().add_to_cart(session_id, product_id, quantity)
     
     def clear_cart(self, session_id: str) -> Dict:
-        """Clear cart in current database"""
+        """Clear cart for a session in current database"""
         return self.get_current_manager().clear_cart(session_id)
     
     # Utility methods
@@ -77,19 +82,22 @@ class UnifiedDatabaseManager:
         return self.get_current_manager().is_available()
     
     def close(self):
-        """Close database connections"""
+        """Close connections to all databases"""
+        if hasattr(self.mysql_manager, 'close'):
+            self.mysql_manager.close()
         if hasattr(self.aerospike_manager, 'close'):
             self.aerospike_manager.close()
-        print("Database connections closed")
+        if hasattr(self.mongo_manager, 'close'):
+            self.mongo_manager.close()
     
     def init_sample_data(self):
-        """Initialize sample data - only for Aerospike when explicitly requested"""
-        if self.current_db == 'aerospike' and self.aerospike_manager.is_available():
-            self.aerospike_manager.init_sample_data()
+        """Initialize sample data in current database"""
+        manager = self.get_current_manager()
+        if hasattr(manager, 'init_sample_data'):
+            manager.init_sample_data()
         else:
-            print("Sample data initialization skipped - not using Aerospike or not available")
-    
-    # Legacy compatibility methods (for backward compatibility)
+            print(f"Sample data initialization not supported for {self.current_db}")
+        
     def log_query(self, operation_type: str, query_description: str, start_time: float, end_time: float, result_count: int = 0):
-        """Log database operations - delegates to current manager"""
-        return self.get_current_manager().log_query(operation_type, query_description, start_time, end_time, result_count) 
+        """Legacy method - now delegated to individual managers"""
+        self.get_current_manager().log_query(operation_type, query_description, start_time, end_time, result_count) 

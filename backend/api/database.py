@@ -12,7 +12,7 @@ def create_database_resource(db_manager, time_api_call, create_api_response):
             current_db = db_manager.get_current_database()
             return create_api_response({
                 'current_database': current_db,
-                'available_databases': ['mysql', 'aerospike']
+                'available_databases': ['mysql', 'aerospike', 'mongodb']
             })
         
         @time_api_call
@@ -25,8 +25,8 @@ def create_database_resource(db_manager, time_api_call, create_api_response):
             
             db_type = data['database']
             
-            if db_type not in ['mysql', 'aerospike']:
-                return create_api_response(None, False, "Invalid database type. Must be 'mysql' or 'aerospike'"), 400
+            if db_type not in ['mysql', 'aerospike', 'mongodb']:
+                return create_api_response(None, False, "Invalid database type. Must be 'mysql', 'aerospike', or 'mongodb'"), 400
             
             try:
                 db_manager.set_database(db_type)

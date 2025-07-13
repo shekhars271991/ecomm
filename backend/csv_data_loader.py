@@ -5,11 +5,13 @@ import time
 from typing import Dict, List, Tuple, Optional
 from mysql_manager import MySQLManager
 from aerospike_manager import AerospikeManager
+from mongo_manager import MongoManager
 
 class CSVDataLoader:
-    def __init__(self, mysql_manager: Optional[MySQLManager], aerospike_manager: Optional[AerospikeManager]):
+    def __init__(self, mysql_manager: Optional[MySQLManager], aerospike_manager: Optional[AerospikeManager], mongo_manager: Optional[MongoManager] = None):
         self.mysql_manager = mysql_manager
         self.aerospike_manager = aerospike_manager
+        self.mongo_manager = mongo_manager
         
     def parse_price(self, price_str: str) -> float:
         """Extract numeric price from price string like '$56.99' or '$99.99'"""
@@ -244,6 +246,38 @@ class CSVDataLoader:
             truncate_time = end_time - start_time
             print(f"Error truncating Aerospike data after {truncate_time:.3f} seconds: {e}")
     
+    def truncate_mongodb_data(self):
+        """Truncate MongoDB data by dropping collections"""
+        print("Truncating MongoDB data...")
+        start_time = time.time()
+        
+        if not self.mongo_manager or self.mongo_manager.database is None:
+            print("MongoDB not available")
+            return
+        
+        try:
+            # Drop all collections
+            self.mongo_manager.database.categories.drop()
+            print("Categories collection dropped")
+            
+            self.mongo_manager.database.meta.drop()
+            print("Meta collection dropped")
+            
+            self.mongo_manager.database.products.drop()
+            print("Products collection dropped")
+            
+            self.mongo_manager.database.cart.drop()
+            print("Cart collection dropped")
+            
+            end_time = time.time()
+            truncate_time = end_time - start_time
+            print(f"MongoDB data truncated successfully in {truncate_time:.3f} seconds")
+            
+        except Exception as e:
+            end_time = time.time()
+            truncate_time = end_time - start_time
+            print(f"Error truncating MongoDB data after {truncate_time:.3f} seconds: {e}")
+    
     def create_mysql_category(self, category_name: str, category_id: int):
         """Create a category in MySQL"""
         if not self.mysql_manager or not self.mysql_manager.Category or not self.mysql_manager.db:
@@ -360,6 +394,73 @@ class CSVDataLoader:
             
         except Exception as e:
             print(f"Error creating Aerospike product {product_data['name']}: {e}")
+    
+    def create_mongodb_categories(self, category_mapping: Dict[str, int]):
+        """Create categories in MongoDB (both individual docs and meta doc)"""
+        if not self.mongo_manager or self.mongo_manager.database is None:
+            return
+        
+        try:
+            categories_list = []
+            for category_name, category_id in category_mapping.items():
+                category_doc = {
+                    'id': category_id,
+                    'name': category_name,
+                    'icon': self.get_category_icon(category_name)
+                }
+                categories_list.append(category_doc)
+            
+            # Insert individual category documents
+            if categories_list:
+                # Check if categories already exist (for skip_duplicates mode)
+                existing_count = self.mongo_manager.database.categories.count_documents({})
+                if existing_count == 0:
+                    self.mongo_manager.database.categories.insert_many(categories_list)
+                    print(f"Created {len(categories_list)} categories in MongoDB")
+                else:
+                    print(f"Skipped categories creation - {existing_count} already exist")
+            
+            # Create meta document with all categories (like Aerospike)
+            existing_meta = self.mongo_manager.database.meta.find_one({'_id': 'all_categories'})
+            if not existing_meta:
+                meta_doc = {
+                    '_id': 'all_categories',
+                    'categories': categories_list
+                }
+                self.mongo_manager.database.meta.insert_one(meta_doc)
+                print("Created categories meta document in MongoDB")
+            else:
+                print("Skipped meta document creation - already exists")
+                
+        except Exception as e:
+            print(f"Error creating MongoDB categories: {e}")
+    
+    def create_mongodb_product(self, product_data: Dict, product_id: int):
+        """Create a product in MongoDB"""
+        if not self.mongo_manager or self.mongo_manager.database is None:
+            return
+        
+        try:
+            # Check if product already exists
+            existing_product = self.mongo_manager.database.products.find_one({'id': product_id})
+            if existing_product:
+                return  # Skip if already exists
+            
+            product_doc = {
+                'id': product_id,
+                'name': product_data['name'],
+                'description': product_data.get('description', ''),
+                'price': product_data['price'],
+                'category_id': product_data['category_id'],
+                'stock': product_data.get('stock_quantity', 100),
+                'is_available': True,
+                'image_url': product_data.get('image_url', '')
+            }
+            
+            self.mongo_manager.database.products.insert_one(product_doc)
+            
+        except Exception as e:
+            print(f"Error creating MongoDB product {product_data['name']}: {e}")
     
     def load_data_to_mysql(self, products: List[Dict], category_mapping: Dict[str, int], skip_duplicates: bool = False):
         """Load data into MySQL database"""
@@ -490,6 +591,64 @@ class CSVDataLoader:
         else:
             print(f"Successfully loaded {len(products)} products into Aerospike in {load_time:.3f} seconds")
     
+    def load_data_to_mongodb(self, products: List[Dict], category_mapping: Dict[str, int], skip_duplicates: bool = False):
+        """Load data into MongoDB database"""
+        print("Loading data into MongoDB...")
+        start_time = time.time()
+        
+        # Insert categories
+        if skip_duplicates:
+            # Check if categories already exist
+            if self.mongo_manager and self.mongo_manager.database is not None:
+                existing_count = self.mongo_manager.database.categories.count_documents({})
+                if existing_count > 0:
+                    print("Categories already exist in MongoDB - skipping")
+                else:
+                    self.create_mongodb_categories(category_mapping)
+        else:
+            self.create_mongodb_categories(category_mapping)
+        
+        # Insert products
+        products_inserted = 0
+        for i, product in enumerate(products, 1):
+            category_id = category_mapping[product['category']]
+            
+            # Create product with category-based fallback image
+            product_data = {
+                'name': product['title'],  # Use 'title' from CSV data
+                'description': product.get('description', ''),
+                'price': product['price'],
+                'category_id': category_id,
+                'stock_quantity': product.get('stock_quantity', 100),
+                'image_url': product.get('image_url', self.get_category_image_url(product['category']))
+            }
+            
+            # Check if product already exists (for skip_duplicates mode)
+            if skip_duplicates:
+                if self.mongo_manager and self.mongo_manager.database is not None:
+                    existing_product = self.mongo_manager.database.products.find_one({'id': i})
+                    if not existing_product:
+                        self.create_mongodb_product(product_data, i)
+                        products_inserted += 1
+            else:
+                self.create_mongodb_product(product_data, i)
+                products_inserted += 1
+            
+            # Progress update
+            if i % 100 == 0:
+                if skip_duplicates:
+                    print(f"Processed {i} products, inserted {products_inserted} new products into MongoDB...")
+                else:
+                    print(f"Inserted {i} products into MongoDB...")
+        
+        end_time = time.time()
+        load_time = end_time - start_time
+        
+        if skip_duplicates:
+            print(f"Successfully processed {len(products)} products, inserted {products_inserted} new products into MongoDB in {load_time:.3f} seconds")
+        else:
+            print(f"Successfully loaded {len(products)} products into MongoDB in {load_time:.3f} seconds")
+    
     def load_all_data(self, csv_file_path: str, skip_truncate: bool = False):
         """Complete data loading process"""
         print("🚀 Starting complete data loading process...")
@@ -512,12 +671,14 @@ class CSVDataLoader:
                 print("🔄 Truncating all existing data...")
                 self.truncate_mysql_data()
                 self.truncate_aerospike_data()
+                self.truncate_mongodb_data()
             else:
                 print("⏭️  Skipping truncation - will skip duplicates during insertion")
             
-            # Step 4: Load data into both databases
+            # Step 4: Load data into all databases
             self.load_data_to_mysql(products, category_mapping, skip_duplicates=skip_truncate)
             self.load_data_to_aerospike(products, category_mapping, skip_duplicates=skip_truncate)
+            self.load_data_to_mongodb(products, category_mapping, skip_duplicates=skip_truncate)
             
             overall_end_time = time.time()
             total_time = overall_end_time - overall_start_time

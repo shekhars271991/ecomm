@@ -101,7 +101,7 @@ export interface CheckoutForm {
 }
 
 // Database types
-export type DatabaseType = 'mysql' | 'aerospike'
+export type DatabaseType = 'mysql' | 'aerospike' | 'mongodb'
 
 export interface DatabaseInfo {
   current_database: DatabaseType

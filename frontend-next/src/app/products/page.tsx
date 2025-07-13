@@ -125,7 +125,7 @@ export default function ProductsPage() {
     router.push(`/products?${params.toString()}`)
   }
 
-  const handleDatabaseSwitch = async (database: 'mysql' | 'aerospike') => {
+  const handleDatabaseSwitch = async (database: 'mysql' | 'aerospike' | 'mongodb') => {
     try {
       await apiService.switchDatabase(database)
       setCurrentDatabase(database)
@@ -239,7 +239,7 @@ export default function ProductsPage() {
     
     // Initialize from localStorage after hydration
     const localDatabase = localStorage.getItem('selectedDatabase') || 'mysql'
-    setCurrentDatabase(localDatabase as 'mysql' | 'aerospike')
+    setCurrentDatabase(localDatabase as 'mysql' | 'aerospike' | 'mongodb')
     
     // Sync with backend
     const syncDatabaseState = async () => {
@@ -249,7 +249,7 @@ export default function ProductsPage() {
         
         // If backend and local storage don't match, update backend to match local preference
         if (backendDatabase !== localDatabase) {
-          await apiService.switchDatabase(localDatabase as 'mysql' | 'aerospike')
+          await apiService.switchDatabase(localDatabase as 'mysql' | 'aerospike' | 'mongodb')
         }
       } catch (error) {
         console.error('Failed to sync database state:', error)
@@ -365,6 +365,23 @@ export default function ProductsPage() {
                         <div>
                           <span className="font-medium block">Aerospike</span>
                           <span className="text-xs text-neutral-500">NoSQL Database</span>
+                        </div>
+                      </div>
+                    </button>
+                    <button
+                      onClick={() => {
+                        handleDatabaseSwitch('mongodb')
+                        setShowDatabaseDropdown(false)
+                      }}
+                      className={`w-full text-left px-3 py-2 rounded-lg transition-colors ${
+                        (isHydrated ? currentDatabase : 'mysql') === 'mongodb' ? 'bg-primary-100 text-primary-700' : 'hover:bg-neutral-100'
+                      }`}
+                    >
+                      <div className="flex items-center space-x-2">
+                        <Database className="w-4 h-4" />
+                        <div>
+                          <span className="font-medium block">MongoDB</span>
+                          <span className="text-xs text-neutral-500">Document Database</span>
                         </div>
                       </div>
                     </button>
@@ -508,7 +525,7 @@ export default function ProductsPage() {
                   >
                     <div className="aspect-square relative overflow-hidden">
                       <Image
-                        src={product.image_url || '/placeholder-product.jpg'}
+                        src={product.image_url && (product.image_url.startsWith('/') || product.image_url.startsWith('http')) ? product.image_url : '/placeholder-product.jpg'}
                         alt={product.name}
                         fill
                         className="object-cover group-hover:scale-110 transition-transform duration-300"
@@ -702,6 +719,14 @@ export default function ProductsPage() {
                       >
                         Aerospike
                       </button>
+                      <button
+                        onClick={() => setQueryFilter('mongodb')}
+                        className={`px-3 py-1 rounded-lg text-sm font-medium transition-colors ${
+                          queryFilter === 'mongodb' ? 'bg-primary-100 text-primary-700' : 'hover:bg-neutral-100'
+                        }`}
+                      >
+                        MongoDB
+                      </button>
                     </div>
                     
                     <div className="flex items-center space-x-4 text-sm text-neutral-600">
@@ -727,7 +752,9 @@ export default function ProductsPage() {
                               <span className={`px-2 py-1 rounded-full text-xs font-medium ${
                                 query.database_type === 'mysql' 
                                   ? 'bg-blue-100 text-blue-700'
-                                  : 'bg-purple-100 text-purple-700'
+                                  : query.database_type === 'aerospike'
+                                  ? 'bg-purple-100 text-purple-700'
+                                  : 'bg-green-100 text-green-700'
                               }`}>
                                 {query.database_type?.toUpperCase()}
                               </span>
@@ -793,7 +820,9 @@ export default function ProductsPage() {
                               <span className={`px-2 py-1 rounded-full text-xs font-medium ${
                                 log.database_type === 'mysql' 
                                   ? 'bg-blue-100 text-blue-700'
-                                  : 'bg-purple-100 text-purple-700'
+                                  : log.database_type === 'aerospike'
+                                  ? 'bg-purple-100 text-purple-700'
+                                  : 'bg-green-100 text-green-700'
                               }`}>
                                 {log.database_type?.toUpperCase()}
                               </span>
@@ -892,7 +921,7 @@ export default function ProductsPage() {
                       <div key={item.id} className="flex items-center space-x-4 p-4 bg-neutral-50 rounded-xl">
                         <div className="w-16 h-16 bg-neutral-200 rounded-lg overflow-hidden">
                           <Image
-                            src={item.product.image_url || '/placeholder-product.jpg'}
+                            src={item.product.image_url && (item.product.image_url.startsWith('/') || item.product.image_url.startsWith('http')) ? item.product.image_url : '/placeholder-product.jpg'}
                             alt={item.product.name}
                             width={64}
                             height={64}

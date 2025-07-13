@@ -12,7 +12,7 @@ export default function DataModelsPage() {
           <div className="flex items-center justify-center">
             <div className="text-center">
               <h1 className="text-3xl font-bold text-neutral-800 mb-2">Database Architecture Comparison</h1>
-              <p className="text-neutral-600">MySQL vs Aerospike Data Models</p>
+              <p className="text-neutral-600">MySQL vs Aerospike vs MongoDB Data Models</p>
             </div>
           </div>
         </div>
@@ -31,18 +31,22 @@ export default function DataModelsPage() {
                 <div className="w-12 h-12 bg-red-100 rounded-xl flex items-center justify-center">
                   <Zap className="w-6 h-6 text-red-600" />
                 </div>
+                <ArrowRight className="w-6 h-6 text-neutral-400" />
+                <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
+                  <FileText className="w-6 h-6 text-green-600" />
+                </div>
               </div>
-              <h2 className="text-2xl font-bold text-neutral-800 mb-4">Relational vs NoSQL Architecture</h2>
+              <h2 className="text-2xl font-bold text-neutral-800 mb-4">Multi-Database Architecture</h2>
               <p className="text-neutral-600 leading-relaxed">
                 This demo showcases how the same grocery application data is structured and accessed 
-                in two fundamentally different database paradigms: MySQL (relational) and Aerospike (NoSQL).
+                in three different database paradigms: MySQL (relational), Aerospike (NoSQL key-value), and MongoDB (document database).
               </p>
             </div>
           </div>
         </div>
 
         {/* Database Comparison */}
-        <div className="grid lg:grid-cols-2 gap-8 mb-12">
+        <div className="grid lg:grid-cols-3 gap-8 mb-12">
           {/* MySQL Section */}
           <motion.div
             initial={{ opacity: 0, x: -20 }}
@@ -259,6 +263,104 @@ export default function DataModelsPage() {
               </div>
             </div>
           </motion.div>
+
+          {/* MongoDB Section */}
+          <motion.div
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.5, delay: 0.2 }}
+            className="bg-white rounded-2xl shadow-soft border border-neutral-200 overflow-hidden"
+          >
+            <div className="bg-green-50 border-b border-green-100 p-6">
+              <div className="flex items-center space-x-3 mb-3">
+                <div className="w-10 h-10 bg-green-500 rounded-xl flex items-center justify-center">
+                  <FileText className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold text-green-800">MongoDB</h3>
+                  <p className="text-green-600 text-sm">Document Database</p>
+                </div>
+              </div>
+              <p className="text-green-700 text-sm">
+                Document-oriented NoSQL database storing data as flexible JSON-like documents
+                with dynamic schemas, perfect for hierarchical and nested data structures.
+              </p>
+            </div>
+
+            <div className="p-6">
+              <h4 className="font-semibold text-neutral-800 mb-4">Document Structure</h4>
+              
+              <div className="space-y-4">
+                {/* Categories Collection */}
+                <div className="border border-neutral-200 rounded-lg overflow-hidden">
+                  <div className="bg-green-50 px-3 py-2 border-b border-green-200">
+                    <span className="font-mono text-sm font-medium text-green-700">categories (collection)</span>
+                  </div>
+                  <div className="p-3 text-sm font-mono">
+                    <div className="bg-neutral-100 p-2 rounded">
+                      <div className="text-green-600 font-medium">Document:</div>
+                      <div className="ml-2 space-y-1">
+                        <div>_id: ObjectId("...")</div>
+                        <div>id: 1</div>
+                        <div>name: "Fruits"</div>
+                        <div>icon: "apple"</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Products Collection */}
+                <div className="border border-neutral-200 rounded-lg overflow-hidden ml-4">
+                  <div className="bg-green-50 px-3 py-2 border-b border-green-200">
+                    <span className="font-mono text-sm font-medium text-green-700">products (collection)</span>
+                  </div>
+                  <div className="p-3 text-sm font-mono">
+                    <div className="bg-neutral-100 p-2 rounded">
+                      <div className="text-green-600 font-medium">Document:</div>
+                      <div className="ml-2 space-y-1">
+                        <div>_id: ObjectId("...")</div>
+                        <div>id: 1</div>
+                        <div>name: "Fresh Apples"</div>
+                        <div>price: 2.99</div>
+                        <div>category_id: 1</div>
+                        <div>stock_quantity: 50</div>
+                        <div>image_url: "apple.jpg"</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Cart Collection */}
+                <div className="border border-neutral-200 rounded-lg overflow-hidden ml-4">
+                  <div className="bg-green-50 px-3 py-2 border-b border-green-200">
+                    <span className="font-mono text-sm font-medium text-green-700">cart (collection)</span>
+                  </div>
+                  <div className="p-3 text-sm font-mono">
+                    <div className="bg-neutral-100 p-2 rounded">
+                      <div className="text-green-600 font-medium">Document:</div>
+                      <div className="ml-2 space-y-1">
+                        <div>_id: ObjectId("...")</div>
+                        <div>user_session: "session_123"</div>
+                        <div>product_id: 1</div>
+                        <div>quantity: 2</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-6 p-4 bg-green-50 rounded-lg">
+                <h5 className="font-medium text-green-800 mb-2">Characteristics:</h5>
+                <ul className="text-sm text-green-700 space-y-1">
+                  <li>• Flexible document schemas</li>
+                  <li>• Rich query language</li>
+                  <li>• Embedded documents and arrays</li>
+                  <li>• Horizontal scaling with sharding</li>
+                  <li>• ACID transactions (4.0+)</li>
+                </ul>
+              </div>
+            </div>
+          </motion.div>
         </div>
 
         {/* Key Differences */}
@@ -291,6 +393,13 @@ export default function DataModelsPage() {
                           key="product_1")
                     </div>
                   </div>
+                  
+                  <div className="border border-green-200 rounded-lg p-4 bg-green-50">
+                    <h4 className="font-medium text-green-800 mb-2">MongoDB - Document Queries</h4>
+                    <div className="bg-white p-3 rounded font-mono text-sm text-green-900">
+                      {`db.products.find({\n  category_id: 1\n}).populate("category")`}
+                    </div>
+                  </div>
                 </div>
               </div>
 
@@ -318,6 +427,16 @@ export default function DataModelsPage() {
                       <li>• No complex query planning</li>
                     </ul>
                   </div>
+                  
+                  <div className="border border-green-200 rounded-lg p-4 bg-green-50">
+                    <h4 className="font-medium text-green-800 mb-2">MongoDB</h4>
+                    <ul className="text-sm text-green-700 space-y-1">
+                      <li>• Document-based storage</li>
+                      <li>• Rich query capabilities</li>
+                      <li>• Horizontal scaling</li>
+                      <li>• Flexible schema evolution</li>
+                    </ul>
+                  </div>
                 </div>
               </div>
             </div>
@@ -326,7 +445,7 @@ export default function DataModelsPage() {
             <div className="mt-8 pt-8 border-t border-neutral-200">
               <h3 className="text-lg font-semibold text-neutral-800 mb-4 text-center">Best Use Cases</h3>
               
-              <div className="grid md:grid-cols-2 gap-6">
+              <div className="grid md:grid-cols-3 gap-6">
                 <div className="text-center">
                   <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center mx-auto mb-3">
                     <Database className="w-6 h-6 text-blue-600" />
@@ -352,6 +471,19 @@ export default function DataModelsPage() {
                     <li>• Massive scale operations</li>
                   </ul>
                 </div>
+                
+                <div className="text-center">
+                  <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center mx-auto mb-3">
+                    <FileText className="w-6 h-6 text-green-600" />
+                  </div>
+                  <h4 className="font-medium text-green-800 mb-2">MongoDB - Best For</h4>
+                  <ul className="text-sm text-green-700 space-y-1 text-left">
+                    <li>• Content management systems</li>
+                    <li>• Rapid application development</li>
+                    <li>• Hierarchical data structures</li>
+                    <li>• Agile development workflows</li>
+                  </ul>
+                </div>
               </div>
             </div>
           </div>
@@ -362,7 +494,7 @@ export default function DataModelsPage() {
           <div className="inline-flex items-center space-x-2 bg-white px-6 py-3 rounded-full shadow-soft border border-neutral-200">
             <FileText className="w-4 h-4 text-neutral-600" />
             <span className="text-sm text-neutral-600">
-              This demo switches between both databases in real-time to showcase performance differences
+              This demo switches between all three databases in real-time to showcase performance differences
             </span>
           </div>
         </div>

@@ -1073,9 +1073,10 @@ def load_initial_data(force_refresh=False):
         # Get the individual managers from the unified manager
         mysql_manager = db_manager.mysql_manager
         aerospike_manager = db_manager.aerospike_manager
+        mongo_manager = db_manager.mongo_manager
         
-        # Create CSV loader
-        csv_loader = CSVDataLoader(mysql_manager, aerospike_manager)
+        # Create CSV loader with all three managers
+        csv_loader = CSVDataLoader(mysql_manager, aerospike_manager, mongo_manager)
         
         # Load data from CSV
         csv_file_path = os.path.join(os.path.dirname(__file__), 'datasets', 'GroceryDataset.csv')

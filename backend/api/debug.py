@@ -37,7 +37,7 @@ def create_debug_resources(db, models, db_tracker, create_api_response):
                 query = DbLog.query
                 
                 # Apply database type filter if provided
-                if database_type and database_type in ['mysql', 'aerospike']:
+                if database_type and database_type in ['mysql', 'aerospike', 'mongodb']:
                     query = query.filter_by(database_type=database_type)
                 
                 # Get logs ordered by timestamp desc
@@ -61,7 +61,7 @@ def create_debug_resources(db, models, db_tracker, create_api_response):
                 query = DbLog.query
                 
                 # Apply database type filter if provided
-                if database_type and database_type in ['mysql', 'aerospike']:
+                if database_type and database_type in ['mysql', 'aerospike', 'mongodb']:
                     query = query.filter_by(database_type=database_type)
                 
                 # Delete filtered logs
@@ -88,7 +88,7 @@ def create_debug_resources(db, models, db_tracker, create_api_response):
                 query = ApiLog.query
                 
                 # Apply database type filter if provided
-                if database_type and database_type in ['mysql', 'aerospike']:
+                if database_type and database_type in ['mysql', 'aerospike', 'mongodb']:
                     query = query.filter_by(database_type=database_type)
                 
                 # Get logs ordered by timestamp desc
@@ -112,7 +112,7 @@ def create_debug_resources(db, models, db_tracker, create_api_response):
                 query = ApiLog.query
                 
                 # Apply database type filter if provided
-                if database_type and database_type in ['mysql', 'aerospike']:
+                if database_type and database_type in ['mysql', 'aerospike', 'mongodb']:
                     query = query.filter_by(database_type=database_type)
                 
                 # Delete filtered logs

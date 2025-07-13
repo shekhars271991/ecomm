@@ -56,9 +56,31 @@ services:
       - grocery_network
     restart: unless-stopped
 
+  mongodb:
+    image: mongo:7.0
+    container_name: grocery_mongodb
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: rootpassword
+      MONGO_INITDB_DATABASE: grocery
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+      - mongodb_config:/data/configdb
+    restart: unless-stopped
+    networks:
+      - grocery_network
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      timeout: 20s
+      retries: 10
+
 volumes:
   mysql_data:
   aerospike_data:
+  mongodb_data:
+  mongodb_config:
 
 networks:
   grocery_network:
