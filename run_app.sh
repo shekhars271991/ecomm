@@ -10,6 +10,7 @@ NC='\033[0m' # No Color
 # Parse command line arguments
 REFRESH_DATA=false
 FRONTEND_TYPE="next"  # Default to Next.js
+DATALOADER_TYPE="file"  # Default to CSV file loading
 HELP=false
 
 while [[ $# -gt 0 ]]; do
@@ -20,6 +21,10 @@ while [[ $# -gt 0 ]]; do
             ;;
         -f|--frontend)
             FRONTEND_TYPE="$2"
+            shift 2
+            ;;
+        -d|--dataloader)
+            DATALOADER_TYPE="$2"
             shift 2
             ;;
         -h|--help)
@@ -42,17 +47,23 @@ if [[ "$HELP" == true ]]; then
     echo "Usage: $0 [OPTIONS]"
     echo ""
     echo "Options:"
-    echo "  -r, --refresh           Force refresh all data from CSV (truncates existing data)"
+    echo "  -r, --refresh           Force refresh all data (truncates existing data)"
     echo "  -f, --frontend TYPE     Choose frontend type: 'next' (default) or 'python'"
+    echo "  -d, --dataloader TYPE   Choose dataloader type: 'file' (default) or 'default'"
     echo "  -h, --help              Show this help message"
     echo ""
+    echo "Dataloader Types:"
+    echo "  file                    Load data from CSV file (GroceryDataset.csv) - 19 categories"
+    echo "  default                 Load sample data (hardcoded) - 6 categories"
+    echo ""
     echo "Examples:"
-    echo "  $0                      # Normal startup with Next.js frontend"
-    echo "  $0 -f python            # Use Python Flask frontend"
-    echo "  $0 -f next              # Use Next.js frontend (default)"
-    echo "  $0 -r                   # Force refresh all data with Next.js frontend"
-    echo "  $0 -r -f python         # Force refresh data with Python frontend"
-    echo "  $0 --refresh --frontend next  # Force refresh with Next.js frontend"
+    echo "  $0                      # Normal startup with Next.js frontend and CSV data"
+    echo "  $0 -f python            # Use Python Flask frontend with CSV data"
+    echo "  $0 -d default           # Use sample data (6 categories)"
+    echo "  $0 -d file              # Use CSV data (19 categories) - default"
+    echo "  $0 -r                   # Force refresh CSV data"
+    echo "  $0 -r -d default        # Force refresh with sample data"
+    echo "  $0 -r -f next -d file   # Refresh CSV data with Next.js frontend"
     echo ""
     exit 0
 fi
@@ -61,6 +72,13 @@ fi
 if [[ "$FRONTEND_TYPE" != "next" && "$FRONTEND_TYPE" != "python" ]]; then
     echo -e "${RED}❌ Invalid frontend type: $FRONTEND_TYPE${NC}"
     echo -e "${YELLOW}Valid options: 'next' or 'python'${NC}"
+    exit 1
+fi
+
+# Validate dataloader type
+if [[ "$DATALOADER_TYPE" != "file" && "$DATALOADER_TYPE" != "default" ]]; then
+    echo -e "${RED}❌ Invalid dataloader type: $DATALOADER_TYPE${NC}"
+    echo -e "${YELLOW}Valid options: 'file' or 'default'${NC}"
     exit 1
 fi
 
@@ -162,13 +180,22 @@ fi
 echo -e "${BLUE}🔧 Starting backend API server...${NC}"
 cd backend
 
-# Set up environment and build backend command with refresh flag if needed
+# Set up environment and build backend command with flags
 export PYTHONPATH=.
 if [[ "$REFRESH_DATA" == true ]]; then
-    echo -e "${YELLOW}🔄 Backend will refresh all data from CSV${NC}"
-    python app.py --refresh > ../backend.log 2>&1 &
+    if [[ "$DATALOADER_TYPE" == "default" ]]; then
+        echo -e "${YELLOW}🔄 Backend will refresh with sample data (6 categories)${NC}"
+    else
+        echo -e "${YELLOW}🔄 Backend will refresh with CSV data (19 categories)${NC}"
+    fi
+    python app.py --refresh --dataloader "$DATALOADER_TYPE" > ../backend.log 2>&1 &
 else
-    python app.py > ../backend.log 2>&1 &
+    if [[ "$DATALOADER_TYPE" == "default" ]]; then
+        echo -e "${BLUE}🔧 Backend starting with sample data (6 categories)${NC}"
+    else
+        echo -e "${BLUE}🔧 Backend starting with CSV data (19 categories)${NC}"
+    fi
+    python app.py --dataloader "$DATALOADER_TYPE" > ../backend.log 2>&1 &
 fi
 
 BACKEND_PID=$!

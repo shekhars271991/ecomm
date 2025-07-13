@@ -1,6 +1,7 @@
 import csv
 import os
 import re
+import time
 from typing import Dict, List, Tuple, Optional
 from mysql_manager import MySQLManager
 from aerospike_manager import AerospikeManager
@@ -155,6 +156,7 @@ class CSVDataLoader:
     def truncate_mysql_data(self):
         """Truncate MySQL data using existing models"""
         print("Truncating MySQL data...")
+        start_time = time.time()
         
         if not self.mysql_manager or not self.mysql_manager.db:
             print("MySQL manager or db not available")
@@ -187,10 +189,14 @@ class CSVDataLoader:
             # Commit all changes
             db.session.commit()
             
-            print("MySQL data truncated successfully")
+            end_time = time.time()
+            truncate_time = end_time - start_time
+            print(f"MySQL data truncated successfully in {truncate_time:.3f} seconds")
             
         except Exception as e:
-            print(f"Error truncating MySQL data: {e}")
+            end_time = time.time()
+            truncate_time = end_time - start_time
+            print(f"Error truncating MySQL data after {truncate_time:.3f} seconds: {e}")
             if self.mysql_manager.db:
                 # Re-enable foreign key checks even if there's an error
                 try:
@@ -200,42 +206,43 @@ class CSVDataLoader:
                 self.mysql_manager.db.session.rollback()
     
     def truncate_aerospike_data(self):
-        """Truncate Aerospike data by scanning and deleting all records"""
+        """Truncate Aerospike data using ASDM truncate commands"""
         print("Truncating Aerospike data...")
+        start_time = time.time()
         
         if not self.aerospike_manager or not self.aerospike_manager.aerospike_client:
             print("Aerospike client not available")
             return
         
         try:
-            # Clear categories
-            scan = self.aerospike_manager.aerospike_client.scan('grocery', 'categories')
-            def delete_category(input_tuple):
-                key, metadata, record = input_tuple
-                if self.aerospike_manager and self.aerospike_manager.aerospike_client:
-                    self.aerospike_manager.aerospike_client.remove(key)
-            scan.foreach(delete_category)
+            # Truncate old categories set (for cleanup)
+            info_string = 'truncate:namespace=grocery;set=categories'
+            self.aerospike_manager.aerospike_client.info_all(info_string)
+            print("Old categories set truncated")
             
-            # Clear products
-            scan = self.aerospike_manager.aerospike_client.scan('grocery', 'products')
-            def delete_product(input_tuple):
-                key, metadata, record = input_tuple
-                if self.aerospike_manager and self.aerospike_manager.aerospike_client:
-                    self.aerospike_manager.aerospike_client.remove(key)
-            scan.foreach(delete_product)
+            # Truncate meta set (contains all_categories)
+            info_string = 'truncate:namespace=grocery;set=meta'
+            self.aerospike_manager.aerospike_client.info_all(info_string)
+            print("Meta set truncated")
             
-            # Clear cart
-            scan = self.aerospike_manager.aerospike_client.scan('grocery', 'cart')
-            def delete_cart(input_tuple):
-                key, metadata, record = input_tuple
-                if self.aerospike_manager and self.aerospike_manager.aerospike_client:
-                    self.aerospike_manager.aerospike_client.remove(key)
-            scan.foreach(delete_cart)
+            # Truncate products set
+            info_string = 'truncate:namespace=grocery;set=products'
+            self.aerospike_manager.aerospike_client.info_all(info_string)
+            print("Products set truncated")
             
-            print("Aerospike data truncated successfully")
+            # Truncate cart set
+            info_string = 'truncate:namespace=grocery;set=cart'
+            self.aerospike_manager.aerospike_client.info_all(info_string)
+            print("Cart set truncated")
+            
+            end_time = time.time()
+            truncate_time = end_time - start_time
+            print(f"Aerospike data truncated successfully in {truncate_time:.3f} seconds")
             
         except Exception as e:
-            print(f"Error truncating Aerospike data: {e}")
+            end_time = time.time()
+            truncate_time = end_time - start_time
+            print(f"Error truncating Aerospike data after {truncate_time:.3f} seconds: {e}")
     
     def create_mysql_category(self, category_name: str, category_id: int):
         """Create a category in MySQL"""
@@ -292,32 +299,35 @@ class CSVDataLoader:
             if self.mysql_manager.db:
                 self.mysql_manager.db.session.rollback()
     
-    def create_aerospike_category(self, category_name: str, category_id: int):
-        """Create a category in Aerospike"""
+    def create_aerospike_categories(self, category_mapping: Dict[str, int]):
+        """Create all categories in Aerospike as a single record"""
         if not self.aerospike_manager or not self.aerospike_manager.aerospike_client:
             return
         
         try:
-            key = ('grocery', 'categories', str(category_id))
+            key = ('grocery', 'meta', 'all_categories')
             
-            # Check if category already exists
-            try:
-                existing_key, existing_metadata, existing_record = self.aerospike_manager.aerospike_client.get(key)
-                if existing_record:
-                    return  # Skip if already exists
-            except:
-                pass  # Key doesn't exist, proceed to create
+            # Build categories list
+            categories_list = []
+            for category_name, category_id in category_mapping.items():
+                categories_list.append({
+                    'id': category_id,
+                    'name': category_name,
+                    'icon': self.get_category_icon(category_name)
+                })
+            
+            # Sort by id for consistent ordering
+            categories_list.sort(key=lambda x: x['id'])
             
             bins = {
-                'id': category_id,
-                'name': category_name,
-                'icon': self.get_category_icon(category_name)
+                'categories': categories_list
             }
             
             self.aerospike_manager.aerospike_client.put(key, bins)
+            print(f"Stored {len(categories_list)} categories in Aerospike meta record")
             
         except Exception as e:
-            print(f"Error creating Aerospike category {category_name}: {e}")
+            print(f"Error creating Aerospike categories: {e}")
     
     def create_aerospike_product(self, product_data: Dict, product_id: int):
         """Create a product in Aerospike"""
@@ -354,6 +364,7 @@ class CSVDataLoader:
     def load_data_to_mysql(self, products: List[Dict], category_mapping: Dict[str, int], skip_duplicates: bool = False):
         """Load data into MySQL database"""
         print("Loading data into MySQL...")
+        start_time = time.time()
         
         # Insert categories
         categories_inserted = 0
@@ -404,34 +415,35 @@ class CSVDataLoader:
                 else:
                     print(f"Inserted {i} products into MySQL...")
         
+        end_time = time.time()
+        load_time = end_time - start_time
+        
         if skip_duplicates:
-            print(f"Successfully processed {len(products)} products, inserted {products_inserted} new products into MySQL")
+            print(f"Successfully processed {len(products)} products, inserted {products_inserted} new products into MySQL in {load_time:.3f} seconds")
         else:
-            print(f"Successfully loaded {len(products)} products into MySQL")
+            print(f"Successfully loaded {len(products)} products into MySQL in {load_time:.3f} seconds")
     
     def load_data_to_aerospike(self, products: List[Dict], category_mapping: Dict[str, int], skip_duplicates: bool = False):
         """Load data into Aerospike database"""
         print("Loading data into Aerospike...")
+        start_time = time.time()
         
-        # Insert categories
-        categories_inserted = 0
-        for category_name, category_id in category_mapping.items():
-            if skip_duplicates:
-                # Check if category exists before inserting
-                key = ('grocery', 'categories', str(category_id))
-                try:
-                    if self.aerospike_manager and self.aerospike_manager.aerospike_client:
-                        existing_key, existing_metadata, existing_record = self.aerospike_manager.aerospike_client.get(key)
-                        if existing_record:
-                            continue
-                except:
-                    pass  # Key doesn't exist, proceed to create
-            
-            self.create_aerospike_category(category_name, category_id)
-            categories_inserted += 1
-        
+        # Insert all categories as a single record
         if skip_duplicates:
-            print(f"Inserted {categories_inserted} new categories into Aerospike")
+            # Check if categories already exist
+            key = ('grocery', 'meta', 'all_categories')
+            try:
+                if self.aerospike_manager and self.aerospike_manager.aerospike_client:
+                    existing_key, existing_metadata, existing_record = self.aerospike_manager.aerospike_client.get(key)
+                    if existing_record:
+                        print("Categories already exist in Aerospike - skipping")
+                    else:
+                        self.create_aerospike_categories(category_mapping)
+            except:
+                # Key doesn't exist, proceed to create
+                self.create_aerospike_categories(category_mapping)
+        else:
+            self.create_aerospike_categories(category_mapping)
         
         # Insert products
         products_inserted = 0
@@ -470,16 +482,26 @@ class CSVDataLoader:
                 else:
                     print(f"Inserted {i} products into Aerospike...")
         
+        end_time = time.time()
+        load_time = end_time - start_time
+        
         if skip_duplicates:
-            print(f"Successfully processed {len(products)} products, inserted {products_inserted} new products into Aerospike")
+            print(f"Successfully processed {len(products)} products, inserted {products_inserted} new products into Aerospike in {load_time:.3f} seconds")
         else:
-            print(f"Successfully loaded {len(products)} products into Aerospike")
+            print(f"Successfully loaded {len(products)} products into Aerospike in {load_time:.3f} seconds")
     
     def load_all_data(self, csv_file_path: str, skip_truncate: bool = False):
         """Complete data loading process"""
+        print("🚀 Starting complete data loading process...")
+        overall_start_time = time.time()
+        
         try:
             # Step 1: Load CSV data
+            csv_start_time = time.time()
             products = self.load_csv_data(csv_file_path)
+            csv_end_time = time.time()
+            csv_load_time = csv_end_time - csv_start_time
+            print(f"📄 CSV data loaded in {csv_load_time:.3f} seconds")
             
             # Step 2: Create category mapping
             category_mapping = self.get_category_mapping(products)
@@ -497,10 +519,16 @@ class CSVDataLoader:
             self.load_data_to_mysql(products, category_mapping, skip_duplicates=skip_truncate)
             self.load_data_to_aerospike(products, category_mapping, skip_duplicates=skip_truncate)
             
+            overall_end_time = time.time()
+            total_time = overall_end_time - overall_start_time
+            
             print("✅ Data loading completed successfully!")
             print(f"📊 Total products processed: {len(products)}")
             print(f"📊 Total categories: {len(category_mapping)}")
+            print(f"⏱️  Total time: {total_time:.3f} seconds")
             
         except Exception as e:
-            print(f"❌ Error during data loading: {e}")
+            overall_end_time = time.time()
+            total_time = overall_end_time - overall_start_time
+            print(f"❌ Error during data loading after {total_time:.3f} seconds: {e}")
             raise 

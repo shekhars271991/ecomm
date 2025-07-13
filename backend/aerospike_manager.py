@@ -51,28 +51,24 @@ class AerospikeManager:
             return []
         
         start_time = time.time()
-        categories = []
         
         try:
-            # Scan all records in categories set
-            scan = self.aerospike_client.scan('grocery', 'categories')
+            # Get all categories from single meta record
+            key = ('grocery', 'meta', 'all_categories')
+            key, metadata, record = self.aerospike_client.get(key)
             
-            def scan_callback(input_tuple):
-                key, metadata, record = input_tuple
-                categories.append({
-                    'id': record.get('id'),
-                    'name': record.get('name'),
-                    'icon': record.get('icon')
-                })
-            
-            scan.foreach(scan_callback)
-            end_time = time.time()
-            
-            self.log_query('SCAN', 'SCAN grocery.categories', start_time, end_time, len(categories))
-            return categories
+            if record and 'categories' in record:
+                categories = record['categories']
+                end_time = time.time()
+                self.log_query('GET', 'GET grocery.meta.all_categories', start_time, end_time, len(categories))
+                return categories
+            else:
+                end_time = time.time()
+                self.log_query('GET', 'GET grocery.meta.all_categories (NOT FOUND)', start_time, end_time, 0)
+                return []
         except Exception as e:
             end_time = time.time()
-            self.log_query('SCAN', f'SCAN grocery.categories (ERROR: {str(e)})', start_time, end_time, 0)
+            self.log_query('GET', f'GET grocery.meta.all_categories (ERROR: {str(e)})', start_time, end_time, 0)
             return []
     
     # Product operations
@@ -314,10 +310,12 @@ class AerospikeManager:
         try:
             start_time = time.time()
             
-            # Insert categories
-            for category in categories:
-                key = ('grocery', 'categories', str(category['id']))
-                self.aerospike_client.put(key, category)
+            # Insert all categories as a single record
+            key = ('grocery', 'meta', 'all_categories')
+            bins = {
+                'categories': categories
+            }
+            self.aerospike_client.put(key, bins)
             
             # Insert products
             for product in products:

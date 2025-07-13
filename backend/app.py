@@ -925,9 +925,8 @@ class DatabaseSwitchResource(Resource):
         try:
             db_manager.set_database(db_type)
             
-            # If switching to Aerospike, initialize sample data
-            if db_type == 'aerospike':
-                db_manager.init_sample_data()
+            # Note: Sample data initialization removed to preserve CSV data
+            # Sample data can be manually initialized if needed
             
             return create_api_response({
                 'current_database': db_type,
@@ -956,8 +955,8 @@ api.add_resource(DatabaseSwitchResource, '/api/database-switch')
 # INITIALIZE DATABASE
 # -------------------------------
 
-def initialize_database(force_refresh=False):
-    """Initialize database with optional force refresh"""
+def initialize_database(force_refresh=False, dataloader_type='file'):
+    """Initialize database with optional force refresh and dataloader type"""
     try:
         # Try to create tables
         db.create_all()
@@ -999,7 +998,16 @@ def initialize_database(force_refresh=False):
         should_load_data = force_refresh or should_load_initial_data()
         
         if should_load_data:
-            load_initial_data(force_refresh)
+            if dataloader_type == 'default':
+                # Load sample data for Aerospike
+                if db_manager.aerospike_manager.is_available():
+                    db_manager.aerospike_manager.init_sample_data()
+                    print("✅ Sample data loaded successfully!")
+                else:
+                    print("⚠️  Aerospike not available for sample data")
+            else:
+                # Load CSV data (default behavior)
+                load_initial_data(force_refresh)
         else:
             print(f"✅ Database already contains {Category.query.count()} categories and {Product.query.count()} products - skipping data load")
             
@@ -1090,15 +1098,33 @@ def load_initial_data(force_refresh=False):
         return False
 
 if __name__ == '__main__':
-    # Check for force refresh parameter
+    # Check for command line parameters
     force_refresh = '--refresh' in sys.argv or '-r' in sys.argv
     
+    # Check for dataloader type parameter
+    dataloader_type = 'file'  # Default to CSV file
+    if '--dataloader' in sys.argv:
+        try:
+            dataloader_index = sys.argv.index('--dataloader')
+            if dataloader_index + 1 < len(sys.argv):
+                dataloader_type = sys.argv[dataloader_index + 1]
+        except (IndexError, ValueError):
+            dataloader_type = 'file'
+    
     if force_refresh:
-        print("🔄 Force refresh mode enabled")
+        if dataloader_type == 'default':
+            print("🔄 Force refresh mode enabled with sample data")
+        else:
+            print("🔄 Force refresh mode enabled with CSV data")
+    else:
+        if dataloader_type == 'default':
+            print("🚀 Starting with sample data")
+        else:
+            print("🚀 Starting with CSV data")
     
     with app.app_context():
         # Initialize database
-        if not initialize_database(force_refresh):
+        if not initialize_database(force_refresh, dataloader_type):
             print("❌ Failed to initialize database. Application cannot start.")
             sys.exit(1)
         

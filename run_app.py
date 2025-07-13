@@ -26,6 +26,7 @@ backend_process = None
 frontend_process = None
 refresh_data = False
 frontend_type = 'next'  # Default to Next.js
+dataloader_type = 'file'  # Default to CSV file loading
 
 def print_colored(message, color=Colors.NC):
     """Print colored message to terminal"""
@@ -38,19 +39,20 @@ def parse_arguments():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  python run_app.py                    # Normal startup with Next.js frontend
-  python run_app.py -f python         # Use Python Flask frontend
-  python run_app.py -f next           # Use Next.js frontend (default)
-  python run_app.py -r                # Force refresh all data with Next.js frontend
-  python run_app.py -r -f python      # Force refresh data with Python frontend
-  python run_app.py --refresh --frontend next  # Force refresh with Next.js frontend
+  python run_app.py                    # Normal startup with Next.js frontend and CSV data
+  python run_app.py -f python         # Use Python Flask frontend with CSV data
+  python run_app.py -d default        # Use sample data (6 categories)
+  python run_app.py -d file           # Use CSV data (19 categories) - default
+  python run_app.py -r                # Force refresh CSV data
+  python run_app.py -r -d default     # Force refresh with sample data
+  python run_app.py -r -f next -d file # Refresh CSV data with Next.js frontend
         """
     )
     
     parser.add_argument(
         '-r', '--refresh',
         action='store_true',
-        help='Force refresh all data from CSV (truncates existing data)'
+        help='Force refresh all data (truncates existing data)'
     )
     
     parser.add_argument(
@@ -58,6 +60,13 @@ Examples:
         choices=['next', 'python'],
         default='next',
         help='Choose frontend type: "next" (default) or "python"'
+    )
+    
+    parser.add_argument(
+        '-d', '--dataloader',
+        choices=['file', 'default'],
+        default='file',
+        help='Choose dataloader type: "file" (CSV data - default) or "default" (sample data)'
     )
     
     return parser.parse_args()
@@ -241,11 +250,23 @@ def start_backend():
     backend_dir = Path("backend")
     backend_log = Path("backend.log")
     
-    # Build command with refresh flag if needed
+    # Build command with flags
     cmd = [sys.executable, "app.py"]
     if refresh_data:
         cmd.append("--refresh")
-        print_colored("🔄 Backend will refresh all data from CSV", Colors.YELLOW)
+    cmd.extend(["--dataloader", dataloader_type])
+    
+    # Show appropriate message
+    if refresh_data:
+        if dataloader_type == "default":
+            print_colored("🔄 Backend will refresh with sample data (6 categories)", Colors.YELLOW)
+        else:
+            print_colored("🔄 Backend will refresh with CSV data (19 categories)", Colors.YELLOW)
+    else:
+        if dataloader_type == "default":
+            print_colored("🔧 Backend starting with sample data (6 categories)", Colors.BLUE)
+        else:
+            print_colored("🔧 Backend starting with CSV data (19 categories)", Colors.BLUE)
     
     with open(backend_log, 'w') as log_file:
         backend_process = subprocess.Popen(
@@ -360,12 +381,13 @@ def start_frontend(frontend_type):
 
 def main():
     """Main function to orchestrate application startup"""
-    global refresh_data, frontend_type
+    global refresh_data, frontend_type, dataloader_type
     
     # Parse arguments
     args = parse_arguments()
     refresh_data = args.refresh
     frontend_type = args.frontend
+    dataloader_type = args.dataloader
     
     # Set up signal handlers
     signal.signal(signal.SIGINT, signal_handler)

@@ -20,9 +20,8 @@ class UnifiedDatabaseManager:
         self.mysql_manager.initialize(app, db, db_tracker, models)
         self.aerospike_manager.initialize(app, db_tracker)
         
-        # Initialize Aerospike data if needed
-        if self.aerospike_manager.is_available():
-            self.aerospike_manager.init_sample_data()
+        # Note: Sample data initialization removed to prevent overriding CSV data
+        # Sample data will only be initialized when explicitly switching to Aerospike
         
         print("Unified Database Manager initialized successfully")
     
@@ -83,12 +82,14 @@ class UnifiedDatabaseManager:
             self.aerospike_manager.close()
         print("Database connections closed")
     
+    def init_sample_data(self):
+        """Initialize sample data - only for Aerospike when explicitly requested"""
+        if self.current_db == 'aerospike' and self.aerospike_manager.is_available():
+            self.aerospike_manager.init_sample_data()
+        else:
+            print("Sample data initialization skipped - not using Aerospike or not available")
+    
     # Legacy compatibility methods (for backward compatibility)
     def log_query(self, operation_type: str, query_description: str, start_time: float, end_time: float, result_count: int = 0):
         """Log database operations - delegates to current manager"""
-        return self.get_current_manager().log_query(operation_type, query_description, start_time, end_time, result_count)
-    
-    def init_sample_data(self):
-        """Initialize sample data in Aerospike"""
-        if self.aerospike_manager.is_available():
-            self.aerospike_manager.init_sample_data() 
+        return self.get_current_manager().log_query(operation_type, query_description, start_time, end_time, result_count) 
