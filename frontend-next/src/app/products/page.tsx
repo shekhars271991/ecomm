@@ -10,6 +10,7 @@ import { apiService, formatPrice, handleApiError } from '@/lib/api'
 import { renderIcon } from '@/lib/iconMapping'
 import type { Product, Category, Cart } from '@/types'
 import Image from 'next/image'
+import ProductDetailModal from '@/components/ProductDetailModal'
 
 export default function ProductsPage() {
   const router = useRouter()
@@ -31,6 +32,8 @@ export default function ProductsPage() {
   const [queryFilter, setQueryFilter] = useState<string>('all')
   const [showCart, setShowCart] = useState(false)
   const [isMenuOpen, setIsMenuOpen] = useState(false)
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null)
+  const [isProductModalOpen, setIsProductModalOpen] = useState(false)
 
   // Fetch categories
   const { data: categories = [], isLoading: categoriesLoading } = useQuery('categories', async () => {
@@ -114,6 +117,16 @@ export default function ProductsPage() {
       ...prev,
       [productId]: Math.max(0, (prev[productId] || 0) + delta)
     }))
+  }
+
+  const handleProductClick = (product: Product) => {
+    setSelectedProduct(product)
+    setIsProductModalOpen(true)
+  }
+
+  const handleCloseModal = () => {
+    setIsProductModalOpen(false)
+    setTimeout(() => setSelectedProduct(null), 300) // Wait for animation to complete
   }
 
   const handleCategorySelect = (categoryId: number | null) => {
@@ -518,81 +531,101 @@ export default function ProductsPage() {
                 ))
               ) : products.length > 0 ? (
                 products.map((product) => (
-                  <motion.div
-                    key={product.id}
-                    whileHover={{ y: -5 }}
-                    className="card card-hover relative overflow-hidden group"
+                                  <motion.div
+                  key={product.id}
+                  whileHover={{ y: -5 }}
+                  className="card card-hover relative overflow-hidden group"
+                >
+                  <div 
+                    className="aspect-square relative overflow-hidden cursor-pointer"
+                    onClick={() => handleProductClick(product)}
                   >
-                    <div className="aspect-square relative overflow-hidden">
-                      <Image
-                        src={product.image_url && (product.image_url.startsWith('/') || product.image_url.startsWith('http')) ? product.image_url : '/placeholder-product.jpg'}
-                        alt={product.name}
-                        fill
-                        className="object-cover group-hover:scale-110 transition-transform duration-300"
-                      />
-                      <button className="absolute top-3 right-3 w-8 h-8 bg-white/80 rounded-full flex items-center justify-center hover:bg-white transition-colors">
-                        <Heart className="w-4 h-4 text-neutral-600" />
-                      </button>
+                    <Image
+                      src={product.image_url && (product.image_url.startsWith('/') || product.image_url.startsWith('http')) ? product.image_url : '/placeholder-product.svg'}
+                      alt={product.name}
+                      fill
+                      className="object-cover group-hover:scale-110 transition-transform duration-300"
+                    />
+                    <button className="absolute top-3 right-3 w-8 h-8 bg-white/80 rounded-full flex items-center justify-center hover:bg-white transition-colors">
+                      <Heart className="w-4 h-4 text-neutral-600" />
+                    </button>
+                  </div>
+                  
+                  <div className="p-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-xs text-primary-500 font-medium bg-primary-50 px-2 py-1 rounded-full">
+                        {product.category?.name || 'Product'}
+                      </span>
+                      <span className="text-xs text-green-600 font-medium">
+                        {product.stock > 0 ? 'In Stock' : 'Out of Stock'}
+                      </span>
                     </div>
                     
-                    <div className="p-4">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-xs text-primary-500 font-medium bg-primary-50 px-2 py-1 rounded-full">
-                          {product.category?.name || 'Product'}
-                        </span>
-                        <span className="text-xs text-green-600 font-medium">
-                          {product.stock > 0 ? 'In Stock' : 'Out of Stock'}
-                        </span>
+                    <div 
+                      className="cursor-pointer"
+                      onClick={() => handleProductClick(product)}
+                    >
+                      <h4 className="font-semibold text-neutral-800 mb-1 line-clamp-2 hover:text-primary-600 transition-colors">{product.name}</h4>
+                      <p className="text-sm text-neutral-600 mb-3 line-clamp-1">{product.description}</p>
+                    </div>
+                    
+                    <div className="flex items-center justify-between">
+                      <div className="text-lg font-bold text-neutral-800">
+                        {formatPrice(product.price)}
                       </div>
                       
-                      <h4 className="font-semibold text-neutral-800 mb-1 line-clamp-2">{product.name}</h4>
-                      <p className="text-sm text-neutral-600 mb-3 line-clamp-1">{product.description}</p>
-                      
-                      <div className="flex items-center justify-between">
-                        <div className="text-lg font-bold text-neutral-800">
-                          {formatPrice(product.price)}
-                        </div>
+                      <div className="flex items-center space-x-2">
+                        {quantities[product.id] > 0 ? (
+                          <div className="flex items-center space-x-2">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                updateQuantity(product.id, -1)
+                              }}
+                              className="w-8 h-8 bg-primary-100 rounded-full flex items-center justify-center hover:bg-primary-200 transition-colors"
+                            >
+                              <Minus className="w-4 h-4 text-primary-600" />
+                            </button>
+                            <span className="font-medium text-neutral-800 w-8 text-center">
+                              {quantities[product.id]}
+                            </span>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                updateQuantity(product.id, 1)
+                              }}
+                              className="w-8 h-8 bg-primary-100 rounded-full flex items-center justify-center hover:bg-primary-200 transition-colors"
+                            >
+                              <Plus className="w-4 h-4 text-primary-600" />
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              updateQuantity(product.id, 1)
+                            }}
+                            className="w-8 h-8 bg-primary-500 rounded-full flex items-center justify-center hover:bg-primary-600 transition-colors"
+                          >
+                            <Plus className="w-4 h-4 text-white" />
+                          </button>
+                        )}
                         
-                        <div className="flex items-center space-x-2">
-                          {quantities[product.id] > 0 ? (
-                            <div className="flex items-center space-x-2">
-                              <button
-                                onClick={() => updateQuantity(product.id, -1)}
-                                className="w-8 h-8 bg-primary-100 rounded-full flex items-center justify-center hover:bg-primary-200 transition-colors"
-                              >
-                                <Minus className="w-4 h-4 text-primary-600" />
-                              </button>
-                              <span className="font-medium text-neutral-800 w-8 text-center">
-                                {quantities[product.id]}
-                              </span>
-                              <button
-                                onClick={() => updateQuantity(product.id, 1)}
-                                className="w-8 h-8 bg-primary-100 rounded-full flex items-center justify-center hover:bg-primary-200 transition-colors"
-                              >
-                                <Plus className="w-4 h-4 text-primary-600" />
-                              </button>
-                            </div>
-                          ) : (
-                            <button
-                              onClick={() => updateQuantity(product.id, 1)}
-                              className="w-8 h-8 bg-primary-500 rounded-full flex items-center justify-center hover:bg-primary-600 transition-colors"
-                            >
-                              <Plus className="w-4 h-4 text-white" />
-                            </button>
-                          )}
-                          
-                          {quantities[product.id] > 0 && (
-                            <button
-                              onClick={() => handleAddToCart(product.id, quantities[product.id])}
-                              className="btn btn-primary text-xs px-3 py-1"
-                            >
-                              Add
-                            </button>
-                          )}
-                        </div>
+                        {quantities[product.id] > 0 && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              handleAddToCart(product.id, quantities[product.id])
+                            }}
+                            className="btn btn-primary text-xs px-3 py-1"
+                          >
+                            Add
+                          </button>
+                        )}
                       </div>
                     </div>
-                  </motion.div>
+                  </div>
+                </motion.div>
                 ))
               ) : (
                 <div className="col-span-full text-center py-12">
@@ -921,7 +954,7 @@ export default function ProductsPage() {
                       <div key={item.id} className="flex items-center space-x-4 p-4 bg-neutral-50 rounded-xl">
                         <div className="w-16 h-16 bg-neutral-200 rounded-lg overflow-hidden">
                           <Image
-                            src={item.product.image_url && (item.product.image_url.startsWith('/') || item.product.image_url.startsWith('http')) ? item.product.image_url : '/placeholder-product.jpg'}
+                            src={item.product.image_url && (item.product.image_url.startsWith('/') || item.product.image_url.startsWith('http')) ? item.product.image_url : '/placeholder-product.svg'}
                             alt={item.product.name}
                             width={64}
                             height={64}
@@ -1075,9 +1108,19 @@ export default function ProductsPage() {
                 </button>
               </nav>
             </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
-  )
+                  </motion.div>
+      )}
+    </AnimatePresence>
+
+    {/* Product Detail Modal */}
+    <ProductDetailModal
+      product={selectedProduct}
+      isOpen={isProductModalOpen}
+      onClose={handleCloseModal}
+      onAddToCart={handleAddToCart}
+      categories={categories}
+      relatedProducts={products.filter(p => p.category_id === selectedProduct?.category_id && p.id !== selectedProduct?.id)}
+    />
+  </div>
+)
 } 
