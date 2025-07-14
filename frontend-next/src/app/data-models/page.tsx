@@ -170,14 +170,14 @@ export default function DataModelsPage() {
                 <span className="bg-red-100 text-red-700 px-2 py-1 rounded-full text-xs font-medium">ACID Compliant</span>
                 <span className="bg-red-100 text-red-700 px-2 py-1 rounded-full text-xs font-medium">Key-Value</span>
                 <span className="bg-red-100 text-red-700 px-2 py-1 rounded-full text-xs font-medium">Hybrid Memory</span>
-                <span className="bg-red-100 text-red-700 px-2 py-1 rounded-full text-xs font-medium">Schema-less</span>
+                <span className="bg-red-100 text-red-700 px-2 py-1 rounded-full text-xs font-medium">Dual Storage</span>
               </div>
             </div>
             
             <div className="p-6">
               <h4 className="font-semibold text-neutral-800 mb-4 flex items-center">
                 <Network className="w-4 h-4 mr-2" />
-                Namespace Structure
+                Dual Storage Architecture
               </h4>
               
               <div className="space-y-4">
@@ -188,20 +188,42 @@ export default function DataModelsPage() {
                   </div>
                 </div>
 
-                {/* Categories Set */}
+                {/* Meta Set */}
                 <div className="border border-neutral-200 rounded-lg overflow-hidden ml-4">
                   <div className="bg-red-50 px-3 py-2 border-b border-red-200">
-                    <span className="font-mono text-sm font-medium text-red-700">categories (set)</span>
+                    <span className="font-mono text-sm font-medium text-red-700">meta (set)</span>
                   </div>
                   <div className="p-3 text-sm font-mono">
                     <div className="space-y-1 text-xs">
-                      <div className="text-neutral-600">Key: category_1, category_2, ...</div>
+                      <div className="text-neutral-600">Key: all_categories</div>
                       <div className="bg-neutral-100 p-2 rounded">
                         <div className="text-red-600 font-medium">Record Bins:</div>
                         <div className="ml-2 space-y-1">
-                          <div>id: 1</div>
-                          <div>name: "Fruits"</div>
-                          <div>icon: "apple"</div>
+                          <div>categories: [</div>
+                          <div className="ml-4">{"{"} id: 1, name: "Bakery", icon: "cake" {"}"},</div>
+                          <div className="ml-4">{"{"} id: 2, name: "Fruits", icon: "apple" {"}"}</div>
+                          <div>]</div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Category Products Set */}
+                <div className="border border-neutral-200 rounded-lg overflow-hidden ml-4">
+                  <div className="bg-red-50 px-3 py-2 border-b border-red-200">
+                    <span className="font-mono text-sm font-medium text-red-700">category_products (set)</span>
+                  </div>
+                  <div className="p-3 text-sm font-mono">
+                    <div className="space-y-1 text-xs">
+                      <div className="text-neutral-600">Key: cat:1, cat:2, ...</div>
+                      <div className="bg-neutral-100 p-2 rounded">
+                        <div className="text-red-600 font-medium">Record Bins:</div>
+                        <div className="ml-2 space-y-1">
+                          <div>products: [</div>
+                          <div className="ml-4">{"{"} id: 1, name: "Bread", price: 2.99 {"}"},</div>
+                          <div className="ml-4">{"{"} id: 2, name: "Cake", price: 12.99 {"}"}</div>
+                          <div>]</div>
                         </div>
                       </div>
                     </div>
@@ -215,15 +237,16 @@ export default function DataModelsPage() {
                   </div>
                   <div className="p-3 text-sm font-mono">
                     <div className="space-y-1 text-xs">
-                      <div className="text-neutral-600">Key: product_1, product_2, ...</div>
+                      <div className="text-neutral-600">Key: product:1, product:2, ...</div>
                       <div className="bg-neutral-100 p-2 rounded">
                         <div className="text-red-600 font-medium">Record Bins:</div>
                         <div className="ml-2 space-y-1">
                           <div>id: 1</div>
-                          <div>name: "Fresh Apples"</div>
+                          <div>name: "Fresh Bread"</div>
                           <div>price: 2.99</div>
                           <div>category_id: 1</div>
                           <div>stock: 50</div>
+                          <div>image_url: "bread.jpg"</div>
                         </div>
                       </div>
                     </div>
@@ -241,9 +264,11 @@ export default function DataModelsPage() {
                       <div className="bg-neutral-100 p-2 rounded">
                         <div className="text-red-600 font-medium">Record Bins:</div>
                         <div className="ml-2 space-y-1">
+                          <div>id: "uuid-123"</div>
                           <div>user_session: "session_123"</div>
                           <div>product_id: 1</div>
                           <div>quantity: 2</div>
+                          <div>created_at: "2024-01-01T10:00:00Z"</div>
                         </div>
                       </div>
                     </div>
@@ -252,13 +277,13 @@ export default function DataModelsPage() {
               </div>
 
               <div className="mt-6 p-4 bg-red-50 rounded-lg">
-                <h5 className="font-medium text-red-800 mb-2">Characteristics:</h5>
+                <h5 className="font-medium text-red-800 mb-2">Dual Storage Benefits:</h5>
                 <ul className="text-sm text-red-700 space-y-1">
-                  <li>• Key-value pairs with bins (fields)</li>
-                  <li>• No schema constraints</li>
-                  <li>• Single record operations</li>
-                  <li>• In-memory performance</li>
-                  <li>• Horizontal scaling</li>
+                  <li>• Category queries: Fast grouped data retrieval</li>
+                  <li>• Individual lookups: Direct key-based access</li>
+                  <li>• Parallel operations: Efficient batch processing</li>
+                  <li>• No schema constraints: Flexible data structure</li>
+                  <li>• Sub-millisecond performance: In-memory speed</li>
                 </ul>
               </div>
             </div>
@@ -385,12 +410,13 @@ export default function DataModelsPage() {
                   </div>
                   
                   <div className="border border-red-200 rounded-lg p-4 bg-red-50">
-                    <h4 className="font-medium text-red-800 mb-2">Aerospike - Key-Based</h4>
+                    <h4 className="font-medium text-red-800 mb-2">Aerospike - Dual Storage</h4>
                     <div className="bg-white p-3 rounded font-mono text-sm text-red-900">
-                      // Direct key access<br/>
-                      get(namespace="grocery",<br/>
-                          set="products",<br/>
-                          key="product_1")
+                      // Category query<br/>
+                      get("grocery", "category_products", "cat:1")<br/>
+                      <br/>
+                      // Individual product<br/>
+                      get("grocery", "products", "product:1")
                     </div>
                   </div>
                   
@@ -443,19 +469,19 @@ export default function DataModelsPage() {
 
             {/* Use Case Scenarios */}
             <div className="mt-8 pt-8 border-t border-neutral-200">
-              <h3 className="text-lg font-semibold text-neutral-800 mb-4 text-center">Best Use Cases</h3>
+              <h3 className="text-lg font-semibold text-neutral-800 mb-4 text-center">Performance Comparison</h3>
               
               <div className="grid md:grid-cols-3 gap-6">
                 <div className="text-center">
                   <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center mx-auto mb-3">
                     <Database className="w-6 h-6 text-blue-600" />
                   </div>
-                  <h4 className="font-medium text-blue-800 mb-2">MySQL - Best For</h4>
+                  <h4 className="font-medium text-blue-800 mb-2">MySQL Performance</h4>
                   <ul className="text-sm text-blue-700 space-y-1 text-left">
-                    <li>• Complex reporting and analytics</li>
-                    <li>• Multi-table transactions</li>
-                    <li>• Regulatory compliance (ACID)</li>
-                    <li>• Ad-hoc queries and exploration</li>
+                    <li>• Complex JOIN operations</li>
+                    <li>• ACID transaction overhead</li>
+                    <li>• Disk-based storage latency</li>
+                    <li>• Query optimization required</li>
                   </ul>
                 </div>
                 
@@ -463,12 +489,12 @@ export default function DataModelsPage() {
                   <div className="w-12 h-12 bg-red-100 rounded-xl flex items-center justify-center mx-auto mb-3">
                     <Zap className="w-6 h-6 text-red-600" />
                   </div>
-                  <h4 className="font-medium text-red-800 mb-2">Aerospike - Best For</h4>
+                  <h4 className="font-medium text-red-800 mb-2">Aerospike Performance</h4>
                   <ul className="text-sm text-red-700 space-y-1 text-left">
-                    <li>• High-speed applications</li>
-                    <li>• Real-time recommendations</li>
-                    <li>• Session storage and caching</li>
-                    <li>• Massive scale operations</li>
+                    <li>• Sub-millisecond response times</li>
+                    <li>• Parallel batch operations</li>
+                    <li>• In-memory performance</li>
+                    <li>• Linear scalability</li>
                   </ul>
                 </div>
                 
@@ -476,12 +502,12 @@ export default function DataModelsPage() {
                   <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center mx-auto mb-3">
                     <FileText className="w-6 h-6 text-green-600" />
                   </div>
-                  <h4 className="font-medium text-green-800 mb-2">MongoDB - Best For</h4>
+                  <h4 className="font-medium text-green-800 mb-2">MongoDB Performance</h4>
                   <ul className="text-sm text-green-700 space-y-1 text-left">
-                    <li>• Content management systems</li>
-                    <li>• Rapid application development</li>
-                    <li>• Hierarchical data structures</li>
-                    <li>• Agile development workflows</li>
+                    <li>• Flexible document queries</li>
+                    <li>• Horizontal scaling capabilities</li>
+                    <li>• Rich aggregation pipeline</li>
+                    <li>• Index-based optimization</li>
                   </ul>
                 </div>
               </div>

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
-import { ShoppingCart, Search, Plus, Minus, Heart, Database, ChevronDown, ArrowLeft, User, MapPin, Menu, X } from 'lucide-react'
+import { ShoppingCart, Search, Plus, Minus, Heart, Database, ChevronDown, ArrowLeft, User, MapPin, Menu, X, BarChart3 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useQuery } from 'react-query'
 import toast from 'react-hot-toast'
@@ -669,6 +669,15 @@ export default function ProductsPage() {
                     >
                       <Database className="w-4 h-4" />
                       <span>View Data Models</span>
+                    </a>
+                    <a
+                      href="/load-test"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center space-x-1 text-sm text-green-600 hover:text-green-700 font-medium hover:underline"
+                    >
+                      <BarChart3 className="w-4 h-4" />
+                      <span>Load Test</span>
                     </a>
                   </div>
                 </div>

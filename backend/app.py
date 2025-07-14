@@ -26,7 +26,7 @@ api = Api(app)
 CORS(app, 
      origins=['http://localhost:3000', 'http://localhost:4000'],
      methods=['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-     allow_headers=['Content-Type', 'Authorization', 'X-Requested-With'],
+     allow_headers=['Content-Type', 'Authorization', 'X-Requested-With', 'X-Database', 'X-Suppress-Logging'],
      supports_credentials=True)
 
 # Initialize database manager
@@ -39,11 +39,38 @@ def before_request():
     if request.method == 'OPTIONS':
         return
     
+    # Handle database switching via X-Database header
+    database_header = request.headers.get('X-Database')
+    if database_header and database_header in ['mysql', 'aerospike', 'mongodb']:
+        db_manager.set_database(database_header)
+    
+    # Check for suppress logging header
+    suppress_logging = request.headers.get('X-Suppress-Logging')
+    if suppress_logging == '1':
+        # Temporarily disable logging for load tests
+        if hasattr(db_manager, 'mysql_manager') and db_manager.mysql_manager.db_tracker:
+            db_manager.mysql_manager.db_tracker.enabled = False
+        if hasattr(db_manager, 'aerospike_manager') and db_manager.aerospike_manager.db_tracker:
+            db_manager.aerospike_manager.db_tracker.enabled = False
+        if hasattr(db_manager, 'mongo_manager') and db_manager.mongo_manager.db_tracker:
+            db_manager.mongo_manager.db_tracker.enabled = False
+    
     # For POST/PUT requests, ensure content type is set
     if request.method in ['POST', 'PUT'] and request.content_type is None:
         # If no content type is set but we have data, assume JSON
         if request.data:
             request.content_type = 'application/json'
+
+@app.after_request
+def after_request(response):
+    # Re-enable logging after request completes
+    if hasattr(db_manager, 'mysql_manager') and db_manager.mysql_manager.db_tracker:
+        db_manager.mysql_manager.db_tracker.enabled = True
+    if hasattr(db_manager, 'aerospike_manager') and db_manager.aerospike_manager.db_tracker:
+        db_manager.aerospike_manager.db_tracker.enabled = True
+    if hasattr(db_manager, 'mongo_manager') and db_manager.mongo_manager.db_tracker:
+        db_manager.mongo_manager.db_tracker.enabled = True
+    return response
 
 def setup_application():
     """Initialize all components of the application"""
@@ -69,6 +96,11 @@ def setup_application():
     api.add_resource(api_resources['DbLogsResource'], '/api/db-logs')
     api.add_resource(api_resources['ApiLogsResource'], '/api/api-logs')
     api.add_resource(api_resources['DatabaseSwitchResource'], '/api/database-switch')
+    api.add_resource(api_resources['LoadTestResource'], '/api/load-test')
+    api.add_resource(api_resources['LoadTestResultsResource'], '/api/load-test/results/<string:test_id>')
+    api.add_resource(api_resources['LoadTestStatusResource'], '/api/load-test/status', '/api/load-test/status/<string:test_id>')
+    api.add_resource(api_resources['LoadTestControlResource'], '/api/load-test/<string:action>')
+    api.add_resource(api_resources['LoadTestExportResource'], '/api/load-test/export/<string:test_id>')
     
     # Initialize database functions
     db_functions = init_database_functions(app, db, models, db_manager, utils['db_tracker'])
@@ -76,22 +108,11 @@ def setup_application():
     return models, utils, api_resources, db_functions
 
 if __name__ == '__main__':
-    # Parse command line arguments
-    force_refresh = '--refresh' in sys.argv or '-r' in sys.argv
-    
-    # Check for dataloader type parameter
-    dataloader_type = 'file'  # Default to CSV file
-    if '--dataloader' in sys.argv:
-        try:
-            dataloader_index = sys.argv.index('--dataloader')
-            if dataloader_index + 1 < len(sys.argv):
-                dataloader_type = sys.argv[dataloader_index + 1]
-        except (IndexError, ValueError):
-            dataloader_type = 'file'
-    
-    # Setup application
     models, utils, api_resources, db_functions = setup_application()
     
-    # Initialize and run the application
-    app = db_functions['main'](force_refresh, dataloader_type)
+    # Initialize database within Flask application context
+    with app.app_context():
+        db_functions['initialize_database']()
+    
+    print("🚀 Starting Flask application...")
     app.run(debug=True, host='0.0.0.0', port=5001) 

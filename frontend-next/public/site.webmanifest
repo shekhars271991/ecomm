@@ -1,0 +1,16 @@
+{
+  "name": "QuickGrocery",
+  "short_name": "QuickGrocery",
+  "description": "Database Performance Demo",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#f1730c",
+  "icons": [
+    {
+      "src": "/logos/aerospike-logo-yellow.webp",
+      "sizes": "any",
+      "type": "image/webp"
+    }
+  ]
+} 

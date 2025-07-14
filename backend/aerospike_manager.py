@@ -3,6 +3,7 @@ import uuid
 from datetime import datetime
 from typing import Dict, List, Optional, Any
 import aerospike
+from aerospike_helpers.batch import records as br
 
 
 class AerospikeManager:
@@ -179,15 +180,23 @@ class AerospikeManager:
             
                         # Use efficient sequential gets (avoiding threading overhead)
             batch_keys = [('grocery', 'products', f'product:{product_id}') for product_id in all_product_ids]
+
+            brs = self.aerospike_client.batch_read(batch_keys)
+            for batch_record in brs.batch_records:
+                if batch_record.result == 0 and batch_record.record:
+                    _, _, bins = batch_record.record
+                    all_products.append(bins)
+
+
             
-            # Get all products efficiently in a tight loop
-            for key in batch_keys:
-                try:
-                    _, metadata, record = self.aerospike_client.get(key)
-                    if record:
-                        all_products.append(record)
-                except:
-                    continue
+            # # Get all products efficiently in a tight loop
+            # for key in batch_keys:
+            #     try:
+            #         _, metadata, record = self.aerospike_client.get(key)
+            #         if record:
+            #             all_products.append(record)
+            #     except:
+            #         continue
             
             end_time = time.time()
             self.log_query('BATCH_GET', f'GET ALL {len(all_product_ids)} products via primary key lookups', start_time, end_time, len(all_products))

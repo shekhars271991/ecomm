@@ -2,41 +2,64 @@
 > quickgrocery-frontend@0.1.0 dev
 > next dev -p 4000
 
-  ▲ Next.js 14.2.30
-  - Local:        http://localhost:4000
+   ▲ Next.js 14.0.4
+   - Local:        http://localhost:4000
 
- ✓ Starting...
- ✓ Ready in 1153ms
- ○ Compiling / ...
- ✓ Compiled / in 870ms (1431 modules)
+ ✓ Ready in 1613ms
+ ○ Compiling /load-test ...
+ ✓ Compiled /load-test in 1246ms (2372 modules)
+ ⚠ Unsupported metadata viewport is configured in metadata export in /load-test. Please move it to viewport export instead.
+Read more: https://nextjs.org/docs/app/api-reference/functions/generate-viewport
+ ⚠ Unsupported metadata themeColor is configured in metadata export in /load-test. Please move it to viewport export instead.
+Read more: https://nextjs.org/docs/app/api-reference/functions/generate-viewport
+ ✓ Compiled in 400ms (1155 modules)
+ ✓ Compiled / in 271ms (2463 modules)
  ⚠ Unsupported metadata viewport is configured in metadata export in /. Please move it to viewport export instead.
 Read more: https://nextjs.org/docs/app/api-reference/functions/generate-viewport
  ⚠ Unsupported metadata themeColor is configured in metadata export in /. Please move it to viewport export instead.
 Read more: https://nextjs.org/docs/app/api-reference/functions/generate-viewport
- GET / 200 in 1009ms
- ✓ Compiled in 122ms (685 modules)
- ✓ Compiled /products in 389ms (1427 modules)
- ⚠ Unsupported metadata viewport is configured in metadata export in /products. Please move it to viewport export instead.
+ ✓ Compiled /products in 196ms (2473 modules)
+ ⚠ Unsupported metadata viewport is configured in metadata export in /products?category=4. Please move it to viewport export instead.
 Read more: https://nextjs.org/docs/app/api-reference/functions/generate-viewport
- ⚠ Unsupported metadata themeColor is configured in metadata export in /products. Please move it to viewport export instead.
+ ⚠ Unsupported metadata themeColor is configured in metadata export in /products?category=4. Please move it to viewport export instead.
 Read more: https://nextjs.org/docs/app/api-reference/functions/generate-viewport
- GET /products 200 in 497ms
-(node:3525) [DEP0060] DeprecationWarning: The `util._extend` API is deprecated. Please use Object.assign() instead.
+(node:32022) [DEP0060] DeprecationWarning: The `util._extend` API is deprecated. Please use Object.assign() instead.
 (Use `node --trace-deprecation ...` to show where the warning was created)
- ✓ Compiled /_not-found in 136ms (1430 modules)
- ⚠ Unsupported metadata viewport is configured in metadata export in /site.webmanifest. Please move it to viewport export instead.
-Read more: https://nextjs.org/docs/app/api-reference/functions/generate-viewport
- ⚠ Unsupported metadata themeColor is configured in metadata export in /site.webmanifest. Please move it to viewport export instead.
-Read more: https://nextjs.org/docs/app/api-reference/functions/generate-viewport
- GET /site.webmanifest 404 in 164ms
  ⚠ The "images.domains" configuration is deprecated. Please use "images.remotePatterns" configuration instead.
- ⚠ Unsupported metadata viewport is configured in metadata export in /products. Please move it to viewport export instead.
+ ⚠ Unsupported metadata viewport is configured in metadata export in /load-test. Please move it to viewport export instead.
 Read more: https://nextjs.org/docs/app/api-reference/functions/generate-viewport
- ⚠ Unsupported metadata themeColor is configured in metadata export in /products. Please move it to viewport export instead.
+ ⚠ Unsupported metadata themeColor is configured in metadata export in /load-test. Please move it to viewport export instead.
 Read more: https://nextjs.org/docs/app/api-reference/functions/generate-viewport
- GET /products 200 in 43ms
- ⚠ Unsupported metadata viewport is configured in metadata export in /site.webmanifest. Please move it to viewport export instead.
+ ⚠ Unsupported metadata viewport is configured in metadata export in /products?_rsc=16hid. Please move it to viewport export instead.
 Read more: https://nextjs.org/docs/app/api-reference/functions/generate-viewport
- ⚠ Unsupported metadata themeColor is configured in metadata export in /site.webmanifest. Please move it to viewport export instead.
+ ⚠ Unsupported metadata themeColor is configured in metadata export in /products?_rsc=16hid. Please move it to viewport export instead.
 Read more: https://nextjs.org/docs/app/api-reference/functions/generate-viewport
- GET /site.webmanifest 404 in 12ms
+ ⚠ Unsupported metadata viewport is configured in metadata export in /products?category=1&_rsc=nmnxo. Please move it to viewport export instead.
+Read more: https://nextjs.org/docs/app/api-reference/functions/generate-viewport
+ ⚠ Unsupported metadata themeColor is configured in metadata export in /products?category=1&_rsc=nmnxo. Please move it to viewport export instead.
+Read more: https://nextjs.org/docs/app/api-reference/functions/generate-viewport
+ ⚠ Unsupported metadata viewport is configured in metadata export in /products?category=1. Please move it to viewport export instead.
+Read more: https://nextjs.org/docs/app/api-reference/functions/generate-viewport
+ ⚠ Unsupported metadata themeColor is configured in metadata export in /products?category=1. Please move it to viewport export instead.
+Read more: https://nextjs.org/docs/app/api-reference/functions/generate-viewport
+ ⚠ Unsupported metadata viewport is configured in metadata export in /products?_rsc=16hid. Please move it to viewport export instead.
+Read more: https://nextjs.org/docs/app/api-reference/functions/generate-viewport
+ ⚠ Unsupported metadata themeColor is configured in metadata export in /products?_rsc=16hid. Please move it to viewport export instead.
+Read more: https://nextjs.org/docs/app/api-reference/functions/generate-viewport
+ ⚠ Unsupported metadata viewport is configured in metadata export in /products?category=2&_rsc=1bzjx. Please move it to viewport export instead.
+Read more: https://nextjs.org/docs/app/api-reference/functions/generate-viewport
+ ⚠ Unsupported metadata themeColor is configured in metadata export in /products?category=2&_rsc=1bzjx. Please move it to viewport export instead.
+Read more: https://nextjs.org/docs/app/api-reference/functions/generate-viewport
+ ⚠ Unsupported metadata viewport is configured in metadata export in /products?category=1. Please move it to viewport export instead.
+Read more: https://nextjs.org/docs/app/api-reference/functions/generate-viewport
+ ⚠ Unsupported metadata themeColor is configured in metadata export in /products?category=1. Please move it to viewport export instead.
+Read more: https://nextjs.org/docs/app/api-reference/functions/generate-viewport
+ ⚠ Unsupported metadata viewport is configured in metadata export in /products?_rsc=16hid. Please move it to viewport export instead.
+Read more: https://nextjs.org/docs/app/api-reference/functions/generate-viewport
+ ⚠ Unsupported metadata themeColor is configured in metadata export in /products?_rsc=16hid. Please move it to viewport export instead.
+Read more: https://nextjs.org/docs/app/api-reference/functions/generate-viewport
+ ⚠ Unsupported metadata viewport is configured in metadata export in /products?category=2&_rsc=1bzjx. Please move it to viewport export instead.
+Read more: https://nextjs.org/docs/app/api-reference/functions/generate-viewport
+ ⚠ Unsupported metadata themeColor is configured in metadata export in /products?category=2&_rsc=1bzjx. Please move it to viewport export instead.
+Read more: https://nextjs.org/docs/app/api-reference/functions/generate-viewport
+[?25h

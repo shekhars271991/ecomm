@@ -7,4 +7,8 @@ cryptography==41.0.3
 aerospike==17.0.0
 pymongo==4.6.0
 Werkzeug==2.3.7
-SQLAlchemy==2.0.20 
+SQLAlchemy==2.0.20
+aiohttp==3.8.6
+asyncio==3.4.3
+statistics==1.0.3.5
+requests==2.31.0 

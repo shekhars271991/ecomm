@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { ShoppingCart, Search, Clock, Truck, Star, Plus, Minus, Filter, MapPin, User, Heart, Menu, X, ArrowRight, Database, ChevronDown } from 'lucide-react'
+import { ShoppingCart, Search, Clock, Truck, Star, Plus, Minus, Filter, MapPin, User, Heart, Menu, X, ArrowRight, Database, ChevronDown, BarChart3 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useQuery } from 'react-query'
 import toast from 'react-hot-toast'
@@ -684,6 +684,15 @@ export default function HomePage() {
                     >
                       <Database className="w-4 h-4" />
                       <span>View Data Models</span>
+                    </a>
+                    <a
+                      href="/load-test"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center space-x-1 text-sm text-green-600 hover:text-green-700 font-medium hover:underline"
+                    >
+                      <BarChart3 className="w-4 h-4" />
+                      <span>Load Test</span>
                     </a>
                     <a
                       href="/why-aerospike"

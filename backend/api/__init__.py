@@ -4,6 +4,7 @@ from .cart import create_cart_resources
 from .orders import create_orders_resource
 from .debug import create_debug_resources
 from .database import create_database_resource
+from .load_test import create_load_test_resources
 
 
 def init_api_resources(db, models, db_manager, utils):
@@ -34,6 +35,14 @@ def init_api_resources(db, models, db_manager, utils):
     
     DatabaseSwitchResource = create_database_resource(db_manager, time_api_call, create_api_response)
     
+    # Create load test resources
+    load_test_resources = create_load_test_resources()
+    LoadTestResource = load_test_resources['LoadTestResource']
+    LoadTestResultsResource = load_test_resources['LoadTestResultsResource']
+    LoadTestStatusResource = load_test_resources['LoadTestStatusResource']
+    LoadTestControlResource = load_test_resources['LoadTestControlResource']
+    LoadTestExportResource = load_test_resources['LoadTestExportResource']
+    
     return {
         'UserResource': UserResource,
         'CategoriesResource': CategoriesResource,
@@ -45,5 +54,10 @@ def init_api_resources(db, models, db_manager, utils):
         'DebugResource': DebugResource,
         'DbLogsResource': DbLogsResource,
         'ApiLogsResource': ApiLogsResource,
-        'DatabaseSwitchResource': DatabaseSwitchResource
+        'DatabaseSwitchResource': DatabaseSwitchResource,
+        'LoadTestResource': LoadTestResource,
+        'LoadTestResultsResource': LoadTestResultsResource,
+        'LoadTestStatusResource': LoadTestStatusResource,
+        'LoadTestControlResource': LoadTestControlResource,
+        'LoadTestExportResource': LoadTestExportResource
     }
