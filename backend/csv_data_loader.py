@@ -227,7 +227,12 @@ class CSVDataLoader:
             self.aerospike_manager.aerospike_client.info_all(info_string)
             print("Meta set truncated")
             
-            # Truncate products set
+            # Truncate category_products set
+            info_string = 'truncate:namespace=grocery;set=category_products'
+            self.aerospike_manager.aerospike_client.info_all(info_string)
+            print("Category products set truncated")
+            
+            # Truncate products set (individual products)
             info_string = 'truncate:namespace=grocery;set=products'
             self.aerospike_manager.aerospike_client.info_all(info_string)
             print("Products set truncated")
@@ -363,38 +368,6 @@ class CSVDataLoader:
         except Exception as e:
             print(f"Error creating Aerospike categories: {e}")
     
-    def create_aerospike_product(self, product_data: Dict, product_id: int):
-        """Create a product in Aerospike"""
-        if not self.aerospike_manager or not self.aerospike_manager.aerospike_client:
-            return
-        
-        try:
-            key = ('grocery', 'products', str(product_id))
-            
-            # Check if product already exists
-            try:
-                existing_key, existing_metadata, existing_record = self.aerospike_manager.aerospike_client.get(key)
-                if existing_record:
-                    return  # Skip if already exists
-            except:
-                pass  # Key doesn't exist, proceed to create
-            
-            bins = {
-                'id': product_id,
-                'name': product_data['name'],
-                'description': product_data.get('description', ''),
-                'price': product_data['price'],
-                'category_id': product_data['category_id'],
-                'stock': product_data.get('stock_quantity', 100),
-                'is_available': True,
-                'image_url': product_data.get('image_url', '')
-            }
-            
-            self.aerospike_manager.aerospike_client.put(key, bins)
-            
-        except Exception as e:
-            print(f"Error creating Aerospike product {product_data['name']}: {e}")
-    
     def create_mongodb_categories(self, category_mapping: Dict[str, int]):
         """Create categories in MongoDB (both individual docs and meta doc)"""
         if not self.mongo_manager or self.mongo_manager.database is None:
@@ -525,11 +498,11 @@ class CSVDataLoader:
             print(f"Successfully loaded {len(products)} products into MySQL in {load_time:.3f} seconds")
     
     def load_data_to_aerospike(self, products: List[Dict], category_mapping: Dict[str, int], skip_duplicates: bool = False):
-        """Load data into Aerospike database"""
+        """Load data into Aerospike database using dual storage: category-based + direct product storage"""
         print("Loading data into Aerospike...")
         start_time = time.time()
         
-        # Insert all categories as a single record
+        # Create categories first
         if skip_duplicates:
             # Check if categories already exist
             key = ('grocery', 'meta', 'all_categories')
@@ -546,50 +519,94 @@ class CSVDataLoader:
         else:
             self.create_aerospike_categories(category_mapping)
         
-        # Insert products
-        products_inserted = 0
+        # Prepare products with IDs and group by category
+        category_products = {}
+        all_products = []
+        
         for i, product in enumerate(products, 1):
             category_id = category_mapping[product['category']]
             
-            # Create product with category-based fallback image
             product_data = {
+                'id': i,
                 'name': product['title'],
                 'description': product['description'][:500] if product['description'] else '',
                 'price': product['price'],
                 'category_id': category_id,
-                'stock_quantity': 100,
-                'rating': product['rating'],
-                'review_count': product['review_count'],
+                'stock': 100,
+                'is_available': True,
                 'image_url': self.get_category_image_url(product['category'])
             }
             
+            # Add to category group
+            if category_id not in category_products:
+                category_products[category_id] = []
+            category_products[category_id].append(product_data)
+            
+            # Add to all products list
+            all_products.append(product_data)
+        
+        # Store products by category (for category-based queries)
+        category_products_inserted = 0
+        for category_id, cat_products in category_products.items():
+            category_key = ('grocery', 'category_products', f'cat:{category_id}')
+            
             if skip_duplicates:
-                # Check if product exists before inserting
-                key = ('grocery', 'products', str(i))
+                # Check if category products already exist
                 try:
                     if self.aerospike_manager and self.aerospike_manager.aerospike_client:
-                        existing_key, existing_metadata, existing_record = self.aerospike_manager.aerospike_client.get(key)
+                        existing_key, existing_metadata, existing_record = self.aerospike_manager.aerospike_client.get(category_key)
                         if existing_record:
+                            print(f"Products for category {category_id} already exist - skipping")
                             continue
                 except:
                     pass  # Key doesn't exist, proceed to create
             
-            self.create_aerospike_product(product_data, i)
-            products_inserted += 1
+            # Store all products for this category in one record
+            bins = {'products': cat_products}
+            if self.aerospike_manager and self.aerospike_manager.aerospike_client:
+                self.aerospike_manager.aerospike_client.put(category_key, bins)
+                category_products_inserted += len(cat_products)
+                
+                print(f"Stored {len(cat_products)} products for category {category_id}")
+            else:
+                print(f"❌ Aerospike client not available - skipping category {category_id}")
+        
+        # Store individual products (for direct product lookups)
+        direct_products_inserted = 0
+        for product_data in all_products:
+            product_key = ('grocery', 'products', f'product:{product_data["id"]}')
             
-            if i % 100 == 0:
-                if skip_duplicates:
-                    print(f"Processed {i} products, inserted {products_inserted} new products into Aerospike...")
-                else:
-                    print(f"Inserted {i} products into Aerospike...")
+            if skip_duplicates:
+                # Check if individual product already exists
+                try:
+                    if self.aerospike_manager and self.aerospike_manager.aerospike_client:
+                        existing_key, existing_metadata, existing_record = self.aerospike_manager.aerospike_client.get(product_key)
+                        if existing_record:
+                            continue  # Skip existing product
+                except:
+                    pass  # Key doesn't exist, proceed to create
+            
+            # Store individual product
+            if self.aerospike_manager and self.aerospike_manager.aerospike_client:
+                self.aerospike_manager.aerospike_client.put(product_key, product_data)
+                direct_products_inserted += 1
+                
+                if direct_products_inserted % 100 == 0:
+                    print(f"Stored {direct_products_inserted} individual products...")
         
         end_time = time.time()
         load_time = end_time - start_time
         
         if skip_duplicates:
-            print(f"Successfully processed {len(products)} products, inserted {products_inserted} new products into Aerospike in {load_time:.3f} seconds")
+            print(f"Successfully processed {len(products)} products:")
+            print(f"  - Category-based storage: {category_products_inserted} products")
+            print(f"  - Direct storage: {direct_products_inserted} products")
+            print(f"  - Total time: {load_time:.3f} seconds")
         else:
-            print(f"Successfully loaded {len(products)} products into Aerospike in {load_time:.3f} seconds")
+            print(f"Successfully loaded {len(products)} products into Aerospike:")
+            print(f"  - Category-based storage: {category_products_inserted} products")
+            print(f"  - Direct storage: {direct_products_inserted} products")
+            print(f"  - Total time: {load_time:.3f} seconds")
     
     def load_data_to_mongodb(self, products: List[Dict], category_mapping: Dict[str, int], skip_duplicates: bool = False):
         """Load data into MongoDB database"""
