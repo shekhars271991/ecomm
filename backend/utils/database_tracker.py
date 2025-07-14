@@ -68,6 +68,10 @@ def create_database_tracker(app, db, models):
             if not self.enabled:
                 return
             
+            # Skip logging for database-switch API calls
+            if 'database-switch' in endpoint:
+                return
+            
             duration = (end_time - start_time) * 1000  # Convert to milliseconds
             
             # Debug output
