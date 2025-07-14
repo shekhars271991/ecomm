@@ -344,9 +344,9 @@ export default function LoadTestPage() {
           
           // Fetch final results
           const resultsResponse = await axios.get(`http://localhost:5001/api/load-test/results/${testId}`)
-          setResults(resultsResponse.data.results)
+          setResults(resultsResponse.data)
           setActiveTab('results')
-          saveTestHistory(resultsResponse.data.results)
+          saveTestHistory(resultsResponse.data)
           toast.success('Load test completed')
           setIsRunning(false)
         } else if (progressData.status === 'failed') {
@@ -434,10 +434,16 @@ export default function LoadTestPage() {
   }
 
   const formatTime = (seconds: number) => {
+    if (seconds === undefined || seconds === null || isNaN(seconds)) {
+      return '0.00ms'
+    }
     return `${(seconds * 1000).toFixed(2)}ms`
   }
 
   const formatDuration = (seconds: number) => {
+    if (seconds === undefined || seconds === null || isNaN(seconds)) {
+      return '0h 0m 0s'
+    }
     const hours = Math.floor(seconds / 3600)
     const minutes = Math.floor((seconds % 3600) / 60)
     const secs = Math.floor(seconds % 60)
@@ -445,6 +451,9 @@ export default function LoadTestPage() {
   }
 
   const formatRate = (rate: number) => {
+    if (rate === undefined || rate === null || isNaN(rate)) {
+      return '0.00 req/s'
+    }
     return `${rate.toFixed(2)} req/s`
   }
 

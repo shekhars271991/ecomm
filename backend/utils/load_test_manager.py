@@ -367,7 +367,10 @@ class LoadTestManager:
         
         # Ranking by average response time (lower is better)
         ranking = sorted(db_metrics.items(), key=lambda x: x[1]['avg_response_time'])
-        summary['performance_ranking'] = [{'database': db, 'avg_response_time': metrics['avg_response_time']} 
+        summary['performance_ranking'] = [{'database': db, 
+                                         'avg_response_time': metrics['avg_response_time'],
+                                         'success_rate': metrics['success_rate'],
+                                         'throughput': metrics['requests_per_second']} 
                                         for db, metrics in ranking]
         
         # Key metrics summary
