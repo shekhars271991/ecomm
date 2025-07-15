@@ -5,15 +5,15 @@
    ▲ Next.js 14.0.4
    - Local:        http://localhost:4000
 
- ✓ Ready in 1302ms
+ ✓ Ready in 1290ms
  ○ Compiling / ...
- ✓ Compiled / in 845ms (1395 modules)
+ ✓ Compiled / in 850ms (1395 modules)
  ⚠ Unsupported metadata viewport is configured in metadata export in /. Please move it to viewport export instead.
 Read more: https://nextjs.org/docs/app/api-reference/functions/generate-viewport
  ⚠ Unsupported metadata themeColor is configured in metadata export in /. Please move it to viewport export instead.
 Read more: https://nextjs.org/docs/app/api-reference/functions/generate-viewport
- ✓ Compiled in 113ms (667 modules)
- ✓ Compiled /load-test in 471ms (2463 modules)
+ ✓ Compiled in 119ms (667 modules)
+ ✓ Compiled /load-test in 442ms (2463 modules)
  ⚠ Unsupported metadata viewport is configured in metadata export in /load-test. Please move it to viewport export instead.
 Read more: https://nextjs.org/docs/app/api-reference/functions/generate-viewport
  ⚠ Unsupported metadata themeColor is configured in metadata export in /load-test. Please move it to viewport export instead.

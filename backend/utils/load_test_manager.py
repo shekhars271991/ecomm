@@ -77,7 +77,7 @@ class LoadTestManager:
             'method': config['method'],
             'endpoint': config['endpoint'],
             'headers': {'User-Agent': f'LoadTest-Session-{session_id}'},
-            'params': {}
+            'params': {'session_id': session_id}
         }
         
         # Add database header (will be set by caller)
@@ -93,7 +93,8 @@ class LoadTestManager:
         if scenario == 'cart':
             request_data['json'] = {
                 'product_id': random.choice(self.product_ids),
-                'quantity': random.randint(1, 3)
+                'quantity': random.randint(1, 3),
+                'session_id': session_id
             }
         
         return request_data
@@ -101,7 +102,7 @@ class LoadTestManager:
     async def _make_request(self, request_data: Dict[str, Any], database: str) -> Dict[str, Any]:
         """Make an HTTP request and measure response time"""
         start_time = time.time()
-        
+        endpoint_path = request_data['endpoint']
         try:
             # Add database header
             headers = request_data.get('headers', {})
@@ -111,7 +112,7 @@ class LoadTestManager:
             if self.suppress_logging:
                 headers['X-Suppress-Logging'] = '1'
                 
-            url = f"{self.base_url}{request_data['endpoint']}"
+            url = f"{self.base_url}{endpoint_path}"
             
             if not self.session:
                 raise RuntimeError("Session not initialized")
@@ -131,9 +132,9 @@ class LoadTestManager:
                     'response_time': response_time,
                     'success': response.status == 200,
                     'content_length': len(content),
-                    'error': None
+                    'error': None,
+                    'endpoint': endpoint_path
                 }
-        
         except Exception as e:
             response_time = time.time() - start_time
             return {
@@ -141,7 +142,8 @@ class LoadTestManager:
                 'response_time': response_time,
                 'success': False,
                 'content_length': 0,
-                'error': str(e)
+                'error': str(e),
+                'endpoint': endpoint_path
             }
     
     def _update_progress(self, database: str, progress_callback: Optional[Callable] = None):
@@ -165,10 +167,11 @@ class LoadTestManager:
                     progress_callback(database, self.completed_requests, self.total_requests, current_rps, success_rate, self.failed_requests, avg_response_time)
                     self.last_progress_update = current_time
     
-    async def _simulate_user(self, user_id: int, database: str, requests_per_user: int, 
+    async def _simulate_user(self, user_id: int, database: str, requests_per_user: int, session_id: str,
                            progress_callback: Optional[Callable] = None) -> List[Dict[str, Any]]:
         """Simulate a single user's load testing"""
-        session_id = f"user_{user_id}_{database}"
+        # Use shared session id per database to ensure all requests map to same session
+        user_session_id = f"{session_id}_u{user_id}"
         user_results = []
         
         for request_num in range(requests_per_user):
@@ -176,7 +179,7 @@ class LoadTestManager:
             scenario = self._get_weighted_scenario()
             
             # Prepare request
-            request_data = self._prepare_request(scenario, session_id)
+            request_data = self._prepare_request(scenario, user_session_id)
             
             # Make request
             result = await self._make_request(request_data, database)
@@ -225,7 +228,14 @@ class LoadTestManager:
         # Create tasks for all users
         tasks = []
         for user_id in range(concurrent_users):
-            task = self._simulate_user(user_id, database, requests_per_user, progress_callback)
+            # Pass progress_callback to ensure real-time updates
+            task = self._simulate_user(
+                user_id,
+                database,
+                requests_per_user,
+                f"{database}_session",
+                progress_callback,
+            )
             tasks.append(task)
         
         # Run all users concurrently
@@ -300,15 +310,25 @@ class LoadTestManager:
         # Error analysis
         error_analysis = {}
         if failed_requests:
-            error_types = {}
+            error_map: Dict[str, Dict[str, Any]] = {}
             for req in failed_requests:
                 error_key = f"HTTP_{req['status_code']}" if req['status_code'] > 0 else "Network_Error"
-                error_types[error_key] = error_types.get(error_key, 0) + 1
+                error_entry = error_map.setdefault(error_key, {
+                    'count': 0,
+                    'message': req['error'] or f"HTTP {req['status_code']}",
+                    'endpoints': set()
+                })
+                error_entry['count'] += 1
+                error_entry['endpoints'].add(req.get('endpoint', ''))
+            
+            # Convert sets to lists for JSON serialization
+            for key, val in error_map.items():
+                val['endpoints'] = sorted(list(filter(None, val['endpoints'])))
             
             error_analysis = {
                 'total_errors': len(failed_requests),
-                'error_types': error_types,
-                'error_rate': len(failed_requests) / len(results) * 100
+                'error_rate': len(failed_requests) / len(results) * 100,
+                'details': error_map
             }
         
         return {

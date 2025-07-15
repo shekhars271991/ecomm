@@ -199,16 +199,36 @@ export default function LoadTestPage() {
   const [showHistoryDetails, setShowHistoryDetails] = useState(false)
   const [selectedHistoryResults, setSelectedHistoryResults] = useState<LoadTestResults | null>(null)
   const [loadingHistoryDetails, setLoadingHistoryDetails] = useState(false)
+  const [selectedDb, setSelectedDb] = useState<string>('')
 
   // Refs
   const progressPollingRef = useRef<NodeJS.Timeout | null>(null)
   const liveMetricsRef = useRef<NodeJS.Timeout | null>(null)
+
+  // New: Restore ongoing test on page refresh
+  const checkActiveTest = async () => {
+    try {
+      const response = await axios.get('http://localhost:5001/api/load-test/status')
+      if (response.data.status === 'running' && response.data.current_test) {
+        // Ensure we are not already polling for this test
+        if (!progressPollingRef.current) {
+          setIsRunning(true)
+          setIsPaused(response.data.is_paused)
+          setActiveTab('progress')
+          startProgressPolling(response.data.current_test)
+        }
+      }
+    } catch (err) {
+      console.error('Failed to check active load test:', err)
+    }
+  }
 
   // Load capabilities and history on mount
   useEffect(() => {
     fetchCapabilities()
     loadTestHistory()
     loadSavedConfigs()
+    checkActiveTest()  // <- Added to restore active test progress on refresh
   }, [])
 
   // Cleanup on unmount
@@ -377,6 +397,10 @@ export default function LoadTestPage() {
   }
 
   const startProgressPolling = (testId: string) => {
+    // Prevent multiple polling intervals for the same or different tests
+    if (progressPollingRef.current) {
+      clearInterval(progressPollingRef.current)
+    }
     progressPollingRef.current = setInterval(async () => {
       try {
         const response = await axios.get(`http://localhost:5001/api/load-test/status/${testId}`)
@@ -569,6 +593,14 @@ export default function LoadTestPage() {
         return aVal < bVal ? 1 : -1
       }
     })
+
+  // After setting results (when results get set) we'll default selectedDb
+  useEffect(() => {
+    if (results) {
+      const firstDb = Object.keys(results.detailed_results)[0]
+      setSelectedDb(firstDb)
+    }
+  }, [results])
 
   return (
     <div className={`min-h-screen ${isFullscreen ? 'fixed inset-0 z-50' : ''} bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900`}>
@@ -1223,166 +1255,187 @@ export default function LoadTestPage() {
                     </div>
                   </div>
 
+                  {/* Database Selector */}
+                  <div className="flex items-center gap-2 mb-6">
+                    <span className="text-sm text-slate-400">Select Database:</span>
+                    <select
+                      value={selectedDb}
+                      onChange={(e) => setSelectedDb(e.target.value)}
+                      className="px-3 py-1.5 bg-slate-700 border border-slate-600 rounded-lg text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                    >
+                      {Object.keys(results.detailed_results).map(db => (
+                        <option key={db} value={db}>{db}</option>
+                      ))}
+                    </select>
+                  </div>
+
                   {/* Detailed Results by Database */}
-                  {Object.entries(results.detailed_results).map(([database, dbResults]) => (
-                    <div key={database} className="bg-slate-800 rounded-xl border border-slate-700 p-6">
-                      <h3 className="text-xl font-semibold text-white mb-6 capitalize flex items-center gap-2">
-                        <Database className="w-6 h-6" />
-                        {database} Database Results
-                      </h3>
+                  {selectedDb && (
+                    (() => {
+                      const database = selectedDb
+                      const dbResults = results.detailed_results[database]
+                      const errorDetails = dbResults.metrics.errors?.details || dbResults.metrics.errors || {}
+                      return (
+                      <div key={database} className="bg-slate-800 rounded-xl border border-slate-700 p-6">
+                        <h3 className="text-xl font-semibold text-white mb-6 capitalize flex items-center gap-2">
+                          <Database className="w-6 h-6" />
+                          {database} Database Results
+                        </h3>
 
-                      {/* Overall Metrics */}
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-                        <div className="bg-slate-700 rounded-lg p-4">
-                          <div className="flex items-center gap-2 mb-2">
-                            <Target className="w-5 h-5 text-blue-400" />
-                            <span className="text-sm text-slate-400">Total Requests</span>
+                        {/* Overall Metrics */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                          <div className="bg-slate-700 rounded-lg p-4">
+                            <div className="flex items-center gap-2 mb-2">
+                              <Target className="w-5 h-5 text-blue-400" />
+                              <span className="text-sm text-slate-400">Total Requests</span>
+                            </div>
+                            <p className="text-2xl font-bold text-white">
+                              {dbResults.metrics.overall.total_requests.toLocaleString()}
+                            </p>
+                            <p className="text-sm text-slate-400">
+                              {dbResults.metrics.overall.successful_requests.toLocaleString()} successful
+                            </p>
                           </div>
-                          <p className="text-2xl font-bold text-white">
-                            {dbResults.metrics.overall.total_requests.toLocaleString()}
-                          </p>
-                          <p className="text-sm text-slate-400">
-                            {dbResults.metrics.overall.successful_requests.toLocaleString()} successful
-                          </p>
+
+                          <div className="bg-slate-700 rounded-lg p-4">
+                            <div className="flex items-center gap-2 mb-2">
+                              <Clock className="w-5 h-5 text-green-400" />
+                              <span className="text-sm text-slate-400">Response Time</span>
+                            </div>
+                            <p className="text-2xl font-bold text-white">
+                              {formatTime(dbResults.metrics.overall.avg_response_time)}
+                            </p>
+                            <p className="text-sm text-slate-400">
+                              P95: {formatTime(dbResults.metrics.overall.p95_response_time)}
+                            </p>
+                          </div>
+
+                          <div className="bg-slate-700 rounded-lg p-4">
+                            <div className="flex items-center gap-2 mb-2">
+                              <Zap className="w-5 h-5 text-yellow-400" />
+                              <span className="text-sm text-slate-400">Throughput</span>
+                            </div>
+                            <p className="text-2xl font-bold text-white">
+                              {formatRate(dbResults.metrics.overall.requests_per_second)}
+                            </p>
+                            <p className="text-sm text-slate-400">
+                              {dbResults.metrics.overall.success_rate.toFixed(1)}% success rate
+                            </p>
+                          </div>
+
+                          <div className="bg-slate-700 rounded-lg p-4">
+                            <div className="flex items-center gap-2 mb-2">
+                              <AlertCircle className="w-5 h-5 text-red-400" />
+                              <span className="text-sm text-slate-400">Errors</span>
+                            </div>
+                            <p className="text-2xl font-bold text-white">
+                              {dbResults.metrics.overall.failed_requests.toLocaleString()}
+                            </p>
+                            <p className="text-sm text-slate-400">
+                              {((dbResults.metrics.overall.failed_requests / dbResults.metrics.overall.total_requests) * 100).toFixed(1)}% failure rate
+                            </p>
+                          </div>
                         </div>
 
-                        <div className="bg-slate-700 rounded-lg p-4">
-                          <div className="flex items-center gap-2 mb-2">
-                            <Clock className="w-5 h-5 text-green-400" />
-                            <span className="text-sm text-slate-400">Response Time</span>
-                          </div>
-                          <p className="text-2xl font-bold text-white">
-                            {formatTime(dbResults.metrics.overall.avg_response_time)}
-                          </p>
-                          <p className="text-sm text-slate-400">
-                            P95: {formatTime(dbResults.metrics.overall.p95_response_time)}
-                          </p>
-                        </div>
-
-                        <div className="bg-slate-700 rounded-lg p-4">
-                          <div className="flex items-center gap-2 mb-2">
-                            <Zap className="w-5 h-5 text-yellow-400" />
-                            <span className="text-sm text-slate-400">Throughput</span>
-                          </div>
-                          <p className="text-2xl font-bold text-white">
-                            {formatRate(dbResults.metrics.overall.requests_per_second)}
-                          </p>
-                          <p className="text-sm text-slate-400">
-                            {dbResults.metrics.overall.success_rate.toFixed(1)}% success rate
-                          </p>
-                        </div>
-
-                        <div className="bg-slate-700 rounded-lg p-4">
-                          <div className="flex items-center gap-2 mb-2">
-                            <AlertCircle className="w-5 h-5 text-red-400" />
-                            <span className="text-sm text-slate-400">Errors</span>
-                          </div>
-                          <p className="text-2xl font-bold text-white">
-                            {dbResults.metrics.overall.failed_requests.toLocaleString()}
-                          </p>
-                          <p className="text-sm text-slate-400">
-                            {((dbResults.metrics.overall.failed_requests / dbResults.metrics.overall.total_requests) * 100).toFixed(1)}% failure rate
-                          </p>
-                        </div>
-                      </div>
-
-                      {/* Response Time Breakdown */}
-                      <div className="mb-6">
-                        <h4 className="text-lg font-semibold text-white mb-4">Response Time Distribution</h4>
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-                          <div className="bg-slate-700 rounded-lg p-3">
-                            <div className="text-sm text-slate-400">Min</div>
-                            <div className="text-lg font-bold text-white">{formatTime(dbResults.metrics.overall.min_response_time)}</div>
-                          </div>
-                          <div className="bg-slate-700 rounded-lg p-3">
-                            <div className="text-sm text-slate-400">Median</div>
-                            <div className="text-lg font-bold text-white">{formatTime(dbResults.metrics.overall.median_response_time)}</div>
-                          </div>
-                          <div className="bg-slate-700 rounded-lg p-3">
-                            <div className="text-sm text-slate-400">Average</div>
-                            <div className="text-lg font-bold text-white">{formatTime(dbResults.metrics.overall.avg_response_time)}</div>
-                          </div>
-                          <div className="bg-slate-700 rounded-lg p-3">
-                            <div className="text-sm text-slate-400">P95</div>
-                            <div className="text-lg font-bold text-white">{formatTime(dbResults.metrics.overall.p95_response_time)}</div>
-                          </div>
-                          <div className="bg-slate-700 rounded-lg p-3">
-                            <div className="text-sm text-slate-400">Max</div>
-                            <div className="text-lg font-bold text-white">{formatTime(dbResults.metrics.overall.max_response_time)}</div>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Per-Scenario Metrics */}
-                      {dbResults.metrics.by_scenario && Object.keys(dbResults.metrics.by_scenario).length > 0 && (
+                        {/* Response Time Breakdown */}
                         <div className="mb-6">
-                          <h4 className="text-lg font-semibold text-white mb-4">Performance by API Endpoint</h4>
-                          <div className="space-y-3">
-                            {Object.entries(dbResults.metrics.by_scenario).map(([scenario, metrics]: [string, any]) => (
-                              <div key={scenario} className="bg-slate-700 rounded-lg p-4">
-                                <div className="flex items-center justify-between mb-2">
-                                  <h5 className="font-medium text-white">{scenario}</h5>
-                                  <span className="text-sm text-slate-400">
-                                    {metrics.total_requests} requests
-                                  </span>
-                                </div>
-                                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                                  <div>
-                                    <span className="text-sm text-slate-400">Avg Response:</span>
-                                    <span className="text-white ml-2">{formatTime(metrics.avg_response_time)}</span>
-                                  </div>
-                                  <div>
-                                    <span className="text-sm text-slate-400">Success Rate:</span>
-                                    <span className="text-white ml-2">{metrics.success_rate.toFixed(1)}%</span>
-                                  </div>
-                                  <div>
-                                    <span className="text-sm text-slate-400">P95:</span>
-                                    <span className="text-white ml-2">{formatTime(metrics.p95_response_time)}</span>
-                                  </div>
-                                  <div>
-                                    <span className="text-sm text-slate-400">Errors:</span>
-                                    <span className="text-white ml-2">{metrics.failed_requests}</span>
-                                  </div>
-                                </div>
-                              </div>
-                            ))}
+                          <h4 className="text-lg font-semibold text-white mb-4">Response Time Distribution</h4>
+                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+                            <div className="bg-slate-700 rounded-lg p-3">
+                              <div className="text-sm text-slate-400">Min</div>
+                              <div className="text-lg font-bold text-white">{formatTime(dbResults.metrics.overall.min_response_time)}</div>
+                            </div>
+                            <div className="bg-slate-700 rounded-lg p-3">
+                              <div className="text-sm text-slate-400">Median</div>
+                              <div className="text-lg font-bold text-white">{formatTime(dbResults.metrics.overall.median_response_time)}</div>
+                            </div>
+                            <div className="bg-slate-700 rounded-lg p-3">
+                              <div className="text-sm text-slate-400">Average</div>
+                              <div className="text-lg font-bold text-white">{formatTime(dbResults.metrics.overall.avg_response_time)}</div>
+                            </div>
+                            <div className="bg-slate-700 rounded-lg p-3">
+                              <div className="text-sm text-slate-400">P95</div>
+                              <div className="text-lg font-bold text-white">{formatTime(dbResults.metrics.overall.p95_response_time)}</div>
+                            </div>
+                            <div className="bg-slate-700 rounded-lg p-3">
+                              <div className="text-sm text-slate-400">Max</div>
+                              <div className="text-lg font-bold text-white">{formatTime(dbResults.metrics.overall.max_response_time)}</div>
+                            </div>
                           </div>
                         </div>
-                      )}
 
-                      {/* Error Analysis */}
-                      {dbResults.metrics.errors && Object.keys(dbResults.metrics.errors).length > 0 && (
-                        <div className="mb-6">
-                          <h4 className="text-lg font-semibold text-white mb-4">Error Analysis</h4>
-                          <div className="space-y-3">
-                            {Object.entries(dbResults.metrics.errors).map(([errorType, errorData]: [string, any]) => (
-                              <div key={errorType} className="bg-red-900/20 border border-red-800 rounded-lg p-4">
-                                <div className="flex items-center justify-between mb-2">
-                                  <h5 className="font-medium text-red-300">{errorType}</h5>
-                                  <span className="text-sm text-red-400">
-                                    {errorData.count} occurrences
-                                  </span>
-                                </div>
-                                <p className="text-sm text-red-100 mb-2">{errorData.message}</p>
-                                {errorData.endpoints && (
-                                  <div>
-                                    <span className="text-sm text-red-400">Affected endpoints:</span>
-                                    <div className="flex flex-wrap gap-2 mt-1">
-                                      {errorData.endpoints.map((endpoint: string, idx: number) => (
-                                        <span key={idx} className="text-xs bg-red-800 text-red-200 px-2 py-1 rounded">
-                                          {endpoint}
-                                        </span>
-                                      ))}
+                        {/* Per-Scenario Metrics */}
+                        {dbResults.metrics.by_scenario && Object.keys(dbResults.metrics.by_scenario).length > 0 && (
+                          <div className="mb-6">
+                            <h4 className="text-lg font-semibold text-white mb-4">Performance by API Endpoint</h4>
+                            <div className="space-y-3">
+                              {Object.entries(dbResults.metrics.by_scenario).map(([scenario, metrics]: [string, any]) => (
+                                <div key={scenario} className="bg-slate-700 rounded-lg p-4">
+                                  <div className="flex items-center justify-between mb-2">
+                                    <h5 className="font-medium text-white">{scenario}</h5>
+                                    <span className="text-sm text-slate-400">
+                                      {metrics.total_requests} requests
+                                    </span>
+                                  </div>
+                                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                                    <div>
+                                      <span className="text-sm text-slate-400">Avg Response:</span>
+                                      <span className="text-white ml-2">{formatTime(metrics.avg_response_time)}</span>
+                                    </div>
+                                    <div>
+                                      <span className="text-sm text-slate-400">Success Rate:</span>
+                                      <span className="text-white ml-2">{metrics.success_rate.toFixed(1)}%</span>
+                                    </div>
+                                    <div>
+                                      <span className="text-sm text-slate-400">P95:</span>
+                                      <span className="text-white ml-2">{formatTime(metrics.p95_response_time)}</span>
+                                    </div>
+                                    <div>
+                                      <span className="text-sm text-slate-400">Errors:</span>
+                                      <span className="text-white ml-2">{metrics.failed_requests}</span>
                                     </div>
                                   </div>
-                                )}
-                              </div>
-                            ))}
+                                </div>
+                              ))}
+                            </div>
                           </div>
-                        </div>
-                      )}
-                    </div>
-                  ))}
+                        )}
+
+                        {/* Error Analysis */}
+                        {errorDetails && Object.keys(errorDetails).length > 0 && (
+                          <div className="mb-6">
+                            <h4 className="text-lg font-semibold text-white mb-4">Error Analysis</h4>
+                            <div className="space-y-3">
+                              {Object.entries(errorDetails).map(([errorType, errorData]: [string, any]) => (
+                                <div key={errorType} className="bg-red-900/20 border border-red-800 rounded-lg p-4">
+                                  <div className="flex items-center justify-between mb-2">
+                                    <h5 className="font-medium text-red-300">{errorType}</h5>
+                                    <span className="text-sm text-red-400">
+                                      {errorData.count} occurrences
+                                    </span>
+                                  </div>
+                                  <p className="text-sm text-red-100 mb-2">{errorData.message}</p>
+                                  {errorData.endpoints && (
+                                    <div>
+                                      <span className="text-sm text-red-400">Affected endpoints:</span>
+                                      <div className="flex flex-wrap gap-2 mt-1">
+                                        {errorData.endpoints.map((endpoint: string, idx: number) => (
+                                          <span key={idx} className="text-xs bg-red-800 text-red-200 px-2 py-1 rounded">
+                                            {endpoint}
+                                          </span>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                      )
+                    })()
+                  )}
 
                   {/* Recommendations */}
                   <div className="bg-slate-800 rounded-xl border border-slate-700 p-6">
@@ -1688,7 +1741,9 @@ export default function LoadTestPage() {
                     </div>
 
                     {/* Detailed Results by Database */}
-                    {Object.entries(selectedHistoryResults.detailed_results).map(([database, dbResults]) => (
+                    {Object.entries(selectedHistoryResults.detailed_results).map(([database, dbResults]) => {
+                      const errorDetails = dbResults.metrics.errors?.details || dbResults.metrics.errors || {}
+                      return (
                       <div key={database} className="bg-slate-700 rounded-lg p-6">
                         <h4 className="text-xl font-semibold text-white mb-6 capitalize flex items-center gap-2">
                           <Database className="w-6 h-6" />
@@ -1815,11 +1870,11 @@ export default function LoadTestPage() {
                         )}
 
                         {/* Error Analysis */}
-                        {dbResults.metrics.errors && Object.keys(dbResults.metrics.errors).length > 0 && (
+                        {errorDetails && Object.keys(errorDetails).length > 0 && (
                           <div className="mb-6">
                             <h5 className="text-lg font-semibold text-white mb-4">Error Analysis</h5>
                             <div className="space-y-3">
-                              {Object.entries(dbResults.metrics.errors).map(([errorType, errorData]: [string, any]) => (
+                              {Object.entries(errorDetails).map(([errorType, errorData]: [string, any]) => (
                                 <div key={errorType} className="bg-red-900/20 border border-red-800 rounded-lg p-4">
                                   <div className="flex items-center justify-between mb-2">
                                     <h6 className="font-medium text-red-300">{errorType}</h6>
@@ -1846,7 +1901,8 @@ export default function LoadTestPage() {
                           </div>
                         )}
                       </div>
-                    ))}
+                      )
+                    })}
 
                     {/* Recommendations */}
                     <div className="bg-slate-700 rounded-lg p-4">
