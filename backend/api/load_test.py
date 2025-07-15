@@ -40,6 +40,7 @@ class LoadTestResource(Resource):
             databases = data['databases']
             concurrent_users = data['concurrent_users']
             requests_per_user = data['requests_per_user']
+            test_name = data.get('name', f'Load Test {datetime.now().strftime("%Y%m%d_%H%M%S")}')
             
             # Validate databases
             valid_databases = ['mysql', 'aerospike', 'mongodb']
@@ -88,7 +89,7 @@ class LoadTestResource(Resource):
             # Start test in background thread
             test_thread = threading.Thread(
                 target=self._run_background_test,
-                args=(test_id, databases, concurrent_users, requests_per_user)
+                args=(test_id, databases, concurrent_users, requests_per_user, test_name)
             )
             test_thread.daemon = True
             test_thread.start()
@@ -104,7 +105,7 @@ class LoadTestResource(Resource):
             logger.error(f"Failed to start load test: {str(e)}")
             return {'error': f'Failed to start load test: {str(e)}'}, 500
     
-    def _run_background_test(self, test_id, databases, concurrent_users, requests_per_user):
+    def _run_background_test(self, test_id, databases, concurrent_users, requests_per_user, test_name):
         """Run the load test in background thread"""
         try:
             # Update progress
@@ -123,7 +124,7 @@ class LoadTestResource(Resource):
             complete_results = {
                 'test_id': test_id,
                 'config': {
-                    'name': f'Load Test {test_id}',
+                    'name': test_name,
                     'databases': databases,
                     'concurrent_users': concurrent_users,
                     'requests_per_user': requests_per_user,
@@ -169,7 +170,7 @@ class LoadTestResource(Resource):
         
         async with LoadTestManager(suppress_logging=True) as manager:
             # Progress callback function
-            def progress_callback(db_name, completed, total, current_rps, success_rate, errors):
+            def progress_callback(db_name, completed, total, current_rps, success_rate, errors, avg_response_time):
                 elapsed = time.time() - start_time
                 progress_percent = (completed / total) * 100 if total > 0 else 0
                 
@@ -185,7 +186,7 @@ class LoadTestResource(Resource):
                     'success_rate': success_rate,
                     'errors': errors,
                     'live_metrics': {
-                        'response_time': 150 + (50 * (1 - success_rate / 100)),  # Simulated
+                        'response_time': avg_response_time * 1000,  # Convert seconds to milliseconds
                         'throughput': current_rps,
                         'error_rate': (errors / completed) * 100 if completed > 0 else 0
                     }

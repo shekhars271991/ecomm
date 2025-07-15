@@ -186,17 +186,6 @@ class AerospikeManager:
                 if batch_record.result == 0 and batch_record.record:
                     _, _, bins = batch_record.record
                     all_products.append(bins)
-
-
-            
-            # # Get all products efficiently in a tight loop
-            # for key in batch_keys:
-            #     try:
-            #         _, metadata, record = self.aerospike_client.get(key)
-            #         if record:
-            #             all_products.append(record)
-            #     except:
-            #         continue
             
             end_time = time.time()
             self.log_query('BATCH_GET', f'GET ALL {len(all_product_ids)} products via primary key lookups', start_time, end_time, len(all_products))
@@ -207,33 +196,28 @@ class AerospikeManager:
             self.log_query('BATCH_GET', f'BATCH GET products via primary key lookups (ERROR: {str(e)})', start_time, end_time, 0)
             return []
     
-    # Cart operations
+    # Cart operations - New efficient implementation without scan operations
     def get_cart_items(self, session_id: str) -> List[Dict]:
-        """Get cart items from Aerospike"""
+        """Get cart items from Aerospike using direct key lookup (O(1) operation)"""
         if not self.aerospike_client:
             return []
         
         start_time = time.time()
-        cart_items = []
         
         try:
-            scan = self.aerospike_client.scan('grocery', 'cart')
+            # Direct key lookup - much more efficient than scan
+            key = ('grocery', 'cart', session_id)
+            (cart_key, metadata, cart_record) = self.aerospike_client.get(key)
             
-            def scan_callback(input_tuple):
-                key, metadata, record = input_tuple
-                if record.get('user_session') == session_id:
-                    cart_items.append({
-                        'id': record.get('id'),
-                        'product_id': record.get('product_id'),
-                        'quantity': record.get('quantity'),
-                        'created_at': record.get('created_at'),
-                        'updated_at': record.get('updated_at')
-                    })
+            if not cart_record:
+                end_time = time.time()
+                self.log_query('GET', f'GET grocery.cart.{session_id} (empty cart)', start_time, end_time, 0)
+                return []
             
-            scan.foreach(scan_callback)
+            cart_items = cart_record.get('items', [])
             end_time = time.time()
             
-            self.log_query('SCAN', f'SCAN grocery.cart WHERE user_session = "{session_id}"', start_time, end_time, len(cart_items))
+            self.log_query('GET', f'GET grocery.cart.{session_id}', start_time, end_time, len(cart_items))
             
             # Add product information to each cart item
             result = []
@@ -241,24 +225,25 @@ class AerospikeManager:
                 product = self.get_product_by_id(item['product_id'])
                 if product:
                     cart_item = {
-                        'id': item['id'],
+                        'id': f"{session_id}_{item['product_id']}",  # Generate consistent ID
                         'product_id': item['product_id'],
                         'quantity': item['quantity'],
-                        'created_at': item['created_at'],
-                        'updated_at': item['updated_at'],
+                        'created_at': item.get('added_at', cart_record.get('created_at')),
+                        'updated_at': item.get('updated_at', cart_record.get('updated_at')),
                         'product': product,
                         'total': float(product['price']) * item['quantity']
                     }
                     result.append(cart_item)
             
             return result
+            
         except Exception as e:
             end_time = time.time()
-            self.log_query('SCAN', f'SCAN grocery.cart (ERROR: {str(e)})', start_time, end_time, 0)
+            self.log_query('GET', f'GET grocery.cart.{session_id} (ERROR: {str(e)})', start_time, end_time, 0)
             return []
     
     def add_to_cart(self, session_id: str, product_id: int, quantity: int = 1) -> Dict:
-        """Add item to cart in Aerospike"""
+        """Add item to cart using efficient single-record model"""
         if not self.aerospike_client:
             return {'success': False, 'message': 'Aerospike not connected'}
         
@@ -270,71 +255,108 @@ class AerospikeManager:
         start_time = time.time()
         
         try:
-            # Create unique cart item key
-            cart_key = f"{session_id}_{product_id}"
-            key = ('grocery', 'cart', cart_key)
+            key = ('grocery', 'cart', session_id)
+            current_time = datetime.utcnow().isoformat()
             
-            # Check if item already exists
+            # Get existing cart or create new one
             try:
-                (existing_key, metadata, existing_record) = self.aerospike_client.get(key)
-                if existing_record:
-                    # Update existing item
-                    existing_record['quantity'] += quantity
-                    existing_record['updated_at'] = datetime.utcnow().isoformat()
-                    self.aerospike_client.put(key, existing_record)
-                    operation = 'UPDATE'
+                (cart_key, metadata, cart_record) = self.aerospike_client.get(key)
+                if not cart_record:
+                    # Create new cart
+                    cart_record = {
+                        'session_id': session_id,
+                        'items': [],
+                        'created_at': current_time,
+                        'updated_at': current_time
+                    }
+                    operation = 'CREATE'
                 else:
-                    raise Exception("Not found")
+                    operation = 'UPDATE'
             except:
-                # Add new item
-                cart_item = {
-                    'id': str(uuid.uuid4()),
-                    'user_session': session_id,
+                # Create new cart
+                cart_record = {
+                    'session_id': session_id,
+                    'items': [],
+                    'created_at': current_time,
+                    'updated_at': current_time
+                }
+                operation = 'CREATE'
+            
+            # Find existing item or add new one
+            items = cart_record.get('items', [])
+            existing_item = None
+            
+            for item in items:
+                if item['product_id'] == product_id:
+                    existing_item = item
+                    break
+            
+            if existing_item:
+                # Update existing item quantity
+                existing_item['quantity'] += quantity
+                existing_item['updated_at'] = current_time
+                item_operation = 'UPDATE'
+            else:
+                # Add new item to cart
+                new_item = {
                     'product_id': product_id,
                     'quantity': quantity,
-                    'created_at': datetime.utcnow().isoformat(),
-                    'updated_at': datetime.utcnow().isoformat()
+                    'added_at': current_time,
+                    'updated_at': current_time
                 }
-                self.aerospike_client.put(key, cart_item)
-                operation = 'INSERT'
+                items.append(new_item)
+                item_operation = 'ADD'
+            
+            # Update cart record
+            cart_record['items'] = items
+            cart_record['updated_at'] = current_time
+            
+            # Save cart back to Aerospike
+            self.aerospike_client.put(key, cart_record)
             
             end_time = time.time()
-            self.log_query(operation, f"{operation} grocery.cart.{cart_key}", start_time, end_time, 1)
+            self.log_query(operation, f"{operation} grocery.cart.{session_id} ({item_operation} product {product_id})", start_time, end_time, 1)
             
             return {'success': True, 'message': 'Item added to cart', 'product': product}
+            
         except Exception as e:
             end_time = time.time()
-            self.log_query('PUT', f'PUT grocery.cart (ERROR: {str(e)})', start_time, end_time, 0)
+            self.log_query('PUT', f'PUT grocery.cart.{session_id} (ERROR: {str(e)})', start_time, end_time, 0)
             return {'success': False, 'message': f'Error adding to cart: {str(e)}'}
     
     def clear_cart(self, session_id: str) -> Dict:
-        """Clear cart in Aerospike"""
+        """Clear cart using efficient single-record deletion"""
         if not self.aerospike_client:
             return {'success': False, 'message': 'Aerospike not connected'}
         
         start_time = time.time()
-        deleted_count = 0
         
         try:
-            scan = self.aerospike_client.scan('grocery', 'cart')
+            key = ('grocery', 'cart', session_id)
             
-            def scan_callback(input_tuple):
-                nonlocal deleted_count
-                key, metadata, record = input_tuple
-                if record.get('user_session') == session_id:
-                    if self.aerospike_client:
-                        self.aerospike_client.remove(key)
-                    deleted_count += 1
+            # Check if cart exists before trying to remove
+            try:
+                (cart_key, metadata, cart_record) = self.aerospike_client.get(key)
+                if not cart_record:
+                    end_time = time.time()
+                    self.log_query('DELETE', f'DELETE grocery.cart.{session_id} (already empty)', start_time, end_time, 0)
+                    return {'success': True, 'message': 'Cart was already empty'}
+                
+                item_count = len(cart_record.get('items', []))
+            except:
+                item_count = 0
             
-            scan.foreach(scan_callback)
+            # Remove the entire cart record
+            self.aerospike_client.remove(key)
+            
             end_time = time.time()
-            
-            self.log_query('DELETE', f"DELETE FROM grocery.cart WHERE user_session = '{session_id}'", start_time, end_time, deleted_count)
+            self.log_query('DELETE', f'DELETE grocery.cart.{session_id} (removed {item_count} items)', start_time, end_time, item_count)
             
             return {'success': True, 'message': 'Cart cleared successfully'}
+            
         except Exception as e:
             end_time = time.time()
-            self.log_query('DELETE', f'DELETE grocery.cart (ERROR: {str(e)})', start_time, end_time, 0)
+            self.log_query('DELETE', f'DELETE grocery.cart.{session_id} (ERROR: {str(e)})', start_time, end_time, 0)
             return {'success': False, 'message': f'Error clearing cart: {str(e)}'}
     
     def init_sample_data(self):

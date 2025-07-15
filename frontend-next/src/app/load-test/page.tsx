@@ -40,7 +40,8 @@ import {
   ArrowUp,
   ArrowDown,
   Maximize2,
-  Minimize2
+  Minimize2,
+  X
 } from 'lucide-react'
 import axios from 'axios'
 import toast from 'react-hot-toast'
@@ -158,7 +159,7 @@ interface TestHistory {
 export default function LoadTestPage() {
   // Configuration State
   const [config, setConfig] = useState<LoadTestConfig>({
-    name: 'Load Test ' + new Date().toLocaleString(),
+    name: '',
     databases: ['aerospike'],
     concurrent_users: 10,
     requests_per_user: 50,
@@ -194,6 +195,10 @@ export default function LoadTestPage() {
   const [filterResults, setFilterResults] = useState('')
   const [sortBy, setSortBy] = useState<'name' | 'timestamp' | 'duration'>('timestamp')
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
+  const [selectedHistoryTest, setSelectedHistoryTest] = useState<TestHistory | null>(null)
+  const [showHistoryDetails, setShowHistoryDetails] = useState(false)
+  const [selectedHistoryResults, setSelectedHistoryResults] = useState<LoadTestResults | null>(null)
+  const [loadingHistoryDetails, setLoadingHistoryDetails] = useState(false)
 
   // Refs
   const progressPollingRef = useRef<NodeJS.Timeout | null>(null)
@@ -245,7 +250,7 @@ export default function LoadTestPage() {
   const saveTestHistory = (testResult: LoadTestResults) => {
     const historyItem: TestHistory = {
       test_id: testResult.test_id,
-      name: testResult.config.name,
+      name: testResult.config.name || `Test ${new Date(testResult.start_time).toLocaleDateString()}`,
       timestamp: testResult.start_time,
       duration: testResult.duration,
       databases: testResult.config.databases,
@@ -263,7 +268,8 @@ export default function LoadTestPage() {
   }
 
   const saveConfig = () => {
-    const newConfig = { ...config, name: config.name || `Config ${Date.now()}` }
+    const configName = config.name.trim() || `Config ${new Date().toLocaleString()}`
+    const newConfig = { ...config, name: configName }
     const updatedConfigs = [...savedConfigs, newConfig]
     setSavedConfigs(updatedConfigs)
     localStorage.setItem('savedLoadTestConfigs', JSON.stringify(updatedConfigs))
@@ -282,11 +288,58 @@ export default function LoadTestPage() {
     toast.success('Configuration deleted')
   }
 
+  const clearTestHistory = () => {
+    if (testHistory.length === 0) {
+      toast('No test history to clear')
+      return
+    }
+    
+    if (window.confirm(`Are you sure you want to clear all test history? This will delete ${testHistory.length} test records permanently.`)) {
+      setTestHistory([])
+      localStorage.removeItem('loadTestHistory')
+      toast.success('Test history cleared successfully')
+    }
+  }
+
+  const clearSavedConfigs = () => {
+    if (savedConfigs.length === 0) {
+      toast('No saved configurations to clear')
+      return
+    }
+    
+    if (window.confirm(`Are you sure you want to clear all saved configurations? This will delete ${savedConfigs.length} saved configs permanently.`)) {
+      setSavedConfigs([])
+      localStorage.removeItem('savedLoadTestConfigs')
+      toast.success('Saved configurations cleared successfully')
+    }
+  }
+
+  const clearAllData = () => {
+    const totalItems = testHistory.length + savedConfigs.length
+    if (totalItems === 0) {
+      toast('No data to clear')
+      return
+    }
+    
+    if (window.confirm(`Are you sure you want to clear ALL load test data? This will delete:\n• ${testHistory.length} test history records\n• ${savedConfigs.length} saved configurations\n\nThis action cannot be undone.`)) {
+      setTestHistory([])
+      setSavedConfigs([])
+      localStorage.removeItem('loadTestHistory')
+      localStorage.removeItem('savedLoadTestConfigs')
+      toast.success('All load test data cleared successfully')
+    }
+  }
+
   const startLoadTest = async () => {
     if (config.databases.length === 0) {
       toast.error('Please select at least one database')
       return
     }
+
+    // Ensure test has a name
+    const testName = config.name.trim() || `Load Test ${new Date().toLocaleString()}`
+    const testConfig = { ...config, name: testName }
+    setConfig(testConfig)
 
     setIsRunning(true)
     setIsPaused(false)
@@ -298,10 +351,10 @@ export default function LoadTestPage() {
 
     try {
       const response = await axios.post('http://localhost:5001/api/load-test', {
-        ...config,
-        databases: config.databases,
-        concurrent_users: config.concurrent_users,
-        requests_per_user: config.requests_per_user
+        ...testConfig,
+        databases: testConfig.databases,
+        concurrent_users: testConfig.concurrent_users,
+        requests_per_user: testConfig.requests_per_user
       })
 
       if (response.data.status === 'started') {
@@ -479,6 +532,32 @@ export default function LoadTestPage() {
     }
   }
 
+  const viewHistoryDetails = async (test: TestHistory) => {
+    setSelectedHistoryTest(test)
+    setShowHistoryDetails(true)
+    setLoadingHistoryDetails(true)
+    
+    try {
+      // Try to fetch full results from backend
+      const response = await axios.get(`http://localhost:5001/api/load-test/results/${test.test_id}`)
+      setSelectedHistoryResults(response.data)
+    } catch (err) {
+      console.error('Failed to fetch full test results:', err)
+      // If backend doesn't have the results, we'll just show basic info
+      setSelectedHistoryResults(null)
+      toast('Full test results not available from backend')
+    } finally {
+      setLoadingHistoryDetails(false)
+    }
+  }
+
+  const closeHistoryDetails = () => {
+    setSelectedHistoryTest(null)
+    setSelectedHistoryResults(null)
+    setShowHistoryDetails(false)
+    setLoadingHistoryDetails(false)
+  }
+
   const filteredHistory = testHistory
     .filter(test => test.name.toLowerCase().includes(filterResults.toLowerCase()))
     .sort((a, b) => {
@@ -503,11 +582,11 @@ export default function LoadTestPage() {
               </div>
               <div>
                 <h1 className="text-3xl font-bold text-white">
-                  Load Testing Console
+                  AdminConsole
                 </h1>
-                <p className="text-slate-400">
+                {/* <p className="text-slate-400">
                   Professional Database Performance Testing Suite
-                </p>
+                </p> */}
               </div>
             </div>
             <div className="flex items-center gap-2">
@@ -583,7 +662,7 @@ export default function LoadTestPage() {
                       value={config.name}
                       onChange={(e) => setConfig(prev => ({ ...prev, name: e.target.value }))}
                       className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                      placeholder="Enter test name"
+                      placeholder={`Load Test ${new Date().toLocaleString()}`}
                     />
                   </div>
 
@@ -757,29 +836,23 @@ export default function LoadTestPage() {
                             max="300"
                           />
                         </div>
-                      </div>
 
-                      {/* Scenario Configuration */}
-                      <div className="mt-6">
-                        <h3 className="text-lg font-semibold text-white mb-4">Test Scenarios</h3>
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                          {Object.entries(config.scenarios).map(([scenario, enabled]) => (
-                            <label key={scenario} className="flex items-center justify-between p-3 bg-slate-700 rounded-lg">
-                              <span className="text-slate-300 capitalize">{scenario}</span>
-                              <input
-                                type="checkbox"
-                                checked={enabled}
-                                onChange={(e) => setConfig(prev => ({
-                                  ...prev,
-                                  scenarios: {
-                                    ...prev.scenarios,
-                                    [scenario]: e.target.checked
-                                  }
-                                }))}
-                                className="rounded border-slate-500 text-blue-600 focus:ring-blue-500 bg-slate-600"
-                              />
-                            </label>
-                          ))}
+                        {/* Retry Count */}
+                        <div>
+                          <label className="block text-sm font-medium text-slate-300 mb-2">
+                            Retry Count
+                          </label>
+                          <input
+                            type="number"
+                            value={config.retry_count}
+                            onChange={(e) => setConfig(prev => ({
+                              ...prev,
+                              retry_count: parseInt(e.target.value) || 3
+                            }))}
+                            className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                            min="0"
+                            max="10"
+                          />
                         </div>
                       </div>
                     </motion.div>
@@ -817,7 +890,16 @@ export default function LoadTestPage() {
               {/* Saved Configurations */}
               {savedConfigs.length > 0 && (
                 <div className="bg-slate-800 rounded-xl border border-slate-700 p-6">
-                  <h3 className="text-lg font-semibold text-white mb-4">Saved Configurations</h3>
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-semibold text-white">Saved Configurations</h3>
+                    <button
+                      onClick={clearSavedConfigs}
+                      className="flex items-center gap-2 px-3 py-1.5 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                      Clear All
+                    </button>
+                  </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {savedConfigs.map((savedConfig, index) => (
                       <div key={index} className="p-4 bg-slate-700 rounded-lg">
@@ -1064,13 +1146,13 @@ export default function LoadTestPage() {
                           <Download className="w-4 h-4" />
                           CSV
                         </button>
-                        <button
+                        {/* <button
                           onClick={() => exportResults('pdf')}
                           className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
                         >
                           <Download className="w-4 h-4" />
                           PDF
-                        </button>
+                        </button> */}
                       </div>
                     </div>
 
@@ -1141,88 +1223,166 @@ export default function LoadTestPage() {
                     </div>
                   </div>
 
-                  {/* Detailed Charts */}
-                  <div className="bg-slate-800 rounded-xl border border-slate-700 p-6">
-                    <h3 className="text-xl font-semibold text-white mb-6">Performance Analysis</h3>
-                    
-                    {/* Response Time Comparison */}
-                    <div className="mb-8">
-                      <h4 className="text-lg font-semibold text-white mb-4">Response Time Comparison</h4>
-                      <div className="h-64">
-                        <ResponsiveContainer width="100%" height="100%">
-                          <BarChart data={results.comparison_summary.performance_ranking}>
-                            <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-                            <XAxis dataKey="database" stroke="#9CA3AF" />
-                            <YAxis stroke="#9CA3AF" />
-                            <Tooltip 
-                              formatter={(value) => [`${(value as number * 1000).toFixed(2)}ms`, 'Response Time']}
-                              contentStyle={{ 
-                                backgroundColor: '#1F2937', 
-                                border: '1px solid #374151',
-                                borderRadius: '8px',
-                                color: '#F3F4F6'
-                              }}
-                            />
-                            <Bar dataKey="avg_response_time" fill="#3B82F6" />
-                          </BarChart>
-                        </ResponsiveContainer>
-                      </div>
-                    </div>
+                  {/* Detailed Results by Database */}
+                  {Object.entries(results.detailed_results).map(([database, dbResults]) => (
+                    <div key={database} className="bg-slate-800 rounded-xl border border-slate-700 p-6">
+                      <h3 className="text-xl font-semibold text-white mb-6 capitalize flex items-center gap-2">
+                        <Database className="w-6 h-6" />
+                        {database} Database Results
+                      </h3>
 
-                    {/* Throughput Comparison */}
-                    <div className="mb-8">
-                      <h4 className="text-lg font-semibold text-white mb-4">Throughput Comparison</h4>
-                      <div className="h-64">
-                        <ResponsiveContainer width="100%" height="100%">
-                          <BarChart data={Object.entries(results.detailed_results).map(([db, data]) => ({
-                            database: db,
-                            requests_per_second: data.metrics.overall.requests_per_second
-                          }))}>
-                            <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-                            <XAxis dataKey="database" stroke="#9CA3AF" />
-                            <YAxis stroke="#9CA3AF" />
-                            <Tooltip 
-                              formatter={(value) => [`${(value as number).toFixed(2)} req/s`, 'Throughput']}
-                              contentStyle={{ 
-                                backgroundColor: '#1F2937', 
-                                border: '1px solid #374151',
-                                borderRadius: '8px',
-                                color: '#F3F4F6'
-                              }}
-                            />
-                            <Bar dataKey="requests_per_second" fill="#10B981" />
-                          </BarChart>
-                        </ResponsiveContainer>
-                      </div>
-                    </div>
+                      {/* Overall Metrics */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                        <div className="bg-slate-700 rounded-lg p-4">
+                          <div className="flex items-center gap-2 mb-2">
+                            <Target className="w-5 h-5 text-blue-400" />
+                            <span className="text-sm text-slate-400">Total Requests</span>
+                          </div>
+                          <p className="text-2xl font-bold text-white">
+                            {dbResults.metrics.overall.total_requests.toLocaleString()}
+                          </p>
+                          <p className="text-sm text-slate-400">
+                            {dbResults.metrics.overall.successful_requests.toLocaleString()} successful
+                          </p>
+                        </div>
 
-                    {/* Success Rate Comparison */}
-                    <div>
-                      <h4 className="text-lg font-semibold text-white mb-4">Success Rate Comparison</h4>
-                      <div className="h-64">
-                        <ResponsiveContainer width="100%" height="100%">
-                          <BarChart data={Object.entries(results.detailed_results).map(([db, data]) => ({
-                            database: db,
-                            success_rate: data.metrics.overall.success_rate
-                          }))}>
-                            <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-                            <XAxis dataKey="database" stroke="#9CA3AF" />
-                            <YAxis domain={[0, 100]} stroke="#9CA3AF" />
-                            <Tooltip 
-                              formatter={(value) => [`${(value as number).toFixed(2)}%`, 'Success Rate']}
-                              contentStyle={{ 
-                                backgroundColor: '#1F2937', 
-                                border: '1px solid #374151',
-                                borderRadius: '8px',
-                                color: '#F3F4F6'
-                              }}
-                            />
-                            <Bar dataKey="success_rate" fill="#F59E0B" />
-                          </BarChart>
-                        </ResponsiveContainer>
+                        <div className="bg-slate-700 rounded-lg p-4">
+                          <div className="flex items-center gap-2 mb-2">
+                            <Clock className="w-5 h-5 text-green-400" />
+                            <span className="text-sm text-slate-400">Response Time</span>
+                          </div>
+                          <p className="text-2xl font-bold text-white">
+                            {formatTime(dbResults.metrics.overall.avg_response_time)}
+                          </p>
+                          <p className="text-sm text-slate-400">
+                            P95: {formatTime(dbResults.metrics.overall.p95_response_time)}
+                          </p>
+                        </div>
+
+                        <div className="bg-slate-700 rounded-lg p-4">
+                          <div className="flex items-center gap-2 mb-2">
+                            <Zap className="w-5 h-5 text-yellow-400" />
+                            <span className="text-sm text-slate-400">Throughput</span>
+                          </div>
+                          <p className="text-2xl font-bold text-white">
+                            {formatRate(dbResults.metrics.overall.requests_per_second)}
+                          </p>
+                          <p className="text-sm text-slate-400">
+                            {dbResults.metrics.overall.success_rate.toFixed(1)}% success rate
+                          </p>
+                        </div>
+
+                        <div className="bg-slate-700 rounded-lg p-4">
+                          <div className="flex items-center gap-2 mb-2">
+                            <AlertCircle className="w-5 h-5 text-red-400" />
+                            <span className="text-sm text-slate-400">Errors</span>
+                          </div>
+                          <p className="text-2xl font-bold text-white">
+                            {dbResults.metrics.overall.failed_requests.toLocaleString()}
+                          </p>
+                          <p className="text-sm text-slate-400">
+                            {((dbResults.metrics.overall.failed_requests / dbResults.metrics.overall.total_requests) * 100).toFixed(1)}% failure rate
+                          </p>
+                        </div>
                       </div>
+
+                      {/* Response Time Breakdown */}
+                      <div className="mb-6">
+                        <h4 className="text-lg font-semibold text-white mb-4">Response Time Distribution</h4>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+                          <div className="bg-slate-700 rounded-lg p-3">
+                            <div className="text-sm text-slate-400">Min</div>
+                            <div className="text-lg font-bold text-white">{formatTime(dbResults.metrics.overall.min_response_time)}</div>
+                          </div>
+                          <div className="bg-slate-700 rounded-lg p-3">
+                            <div className="text-sm text-slate-400">Median</div>
+                            <div className="text-lg font-bold text-white">{formatTime(dbResults.metrics.overall.median_response_time)}</div>
+                          </div>
+                          <div className="bg-slate-700 rounded-lg p-3">
+                            <div className="text-sm text-slate-400">Average</div>
+                            <div className="text-lg font-bold text-white">{formatTime(dbResults.metrics.overall.avg_response_time)}</div>
+                          </div>
+                          <div className="bg-slate-700 rounded-lg p-3">
+                            <div className="text-sm text-slate-400">P95</div>
+                            <div className="text-lg font-bold text-white">{formatTime(dbResults.metrics.overall.p95_response_time)}</div>
+                          </div>
+                          <div className="bg-slate-700 rounded-lg p-3">
+                            <div className="text-sm text-slate-400">Max</div>
+                            <div className="text-lg font-bold text-white">{formatTime(dbResults.metrics.overall.max_response_time)}</div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Per-Scenario Metrics */}
+                      {dbResults.metrics.by_scenario && Object.keys(dbResults.metrics.by_scenario).length > 0 && (
+                        <div className="mb-6">
+                          <h4 className="text-lg font-semibold text-white mb-4">Performance by API Endpoint</h4>
+                          <div className="space-y-3">
+                            {Object.entries(dbResults.metrics.by_scenario).map(([scenario, metrics]: [string, any]) => (
+                              <div key={scenario} className="bg-slate-700 rounded-lg p-4">
+                                <div className="flex items-center justify-between mb-2">
+                                  <h5 className="font-medium text-white">{scenario}</h5>
+                                  <span className="text-sm text-slate-400">
+                                    {metrics.total_requests} requests
+                                  </span>
+                                </div>
+                                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                                  <div>
+                                    <span className="text-sm text-slate-400">Avg Response:</span>
+                                    <span className="text-white ml-2">{formatTime(metrics.avg_response_time)}</span>
+                                  </div>
+                                  <div>
+                                    <span className="text-sm text-slate-400">Success Rate:</span>
+                                    <span className="text-white ml-2">{metrics.success_rate.toFixed(1)}%</span>
+                                  </div>
+                                  <div>
+                                    <span className="text-sm text-slate-400">P95:</span>
+                                    <span className="text-white ml-2">{formatTime(metrics.p95_response_time)}</span>
+                                  </div>
+                                  <div>
+                                    <span className="text-sm text-slate-400">Errors:</span>
+                                    <span className="text-white ml-2">{metrics.failed_requests}</span>
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Error Analysis */}
+                      {dbResults.metrics.errors && Object.keys(dbResults.metrics.errors).length > 0 && (
+                        <div className="mb-6">
+                          <h4 className="text-lg font-semibold text-white mb-4">Error Analysis</h4>
+                          <div className="space-y-3">
+                            {Object.entries(dbResults.metrics.errors).map(([errorType, errorData]: [string, any]) => (
+                              <div key={errorType} className="bg-red-900/20 border border-red-800 rounded-lg p-4">
+                                <div className="flex items-center justify-between mb-2">
+                                  <h5 className="font-medium text-red-300">{errorType}</h5>
+                                  <span className="text-sm text-red-400">
+                                    {errorData.count} occurrences
+                                  </span>
+                                </div>
+                                <p className="text-sm text-red-100 mb-2">{errorData.message}</p>
+                                {errorData.endpoints && (
+                                  <div>
+                                    <span className="text-sm text-red-400">Affected endpoints:</span>
+                                    <div className="flex flex-wrap gap-2 mt-1">
+                                      {errorData.endpoints.map((endpoint: string, idx: number) => (
+                                        <span key={idx} className="text-xs bg-red-800 text-red-200 px-2 py-1 rounded">
+                                          {endpoint}
+                                        </span>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
-                  </div>
+                  ))}
 
                   {/* Recommendations */}
                   <div className="bg-slate-800 rounded-xl border border-slate-700 p-6">
@@ -1230,7 +1390,7 @@ export default function LoadTestPage() {
                     <div className="space-y-3">
                       {results.comparison_summary.recommendations.map((rec, index) => (
                         <div key={index} className="flex items-start gap-3 p-3 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
-                          <AlertCircle className="w-5 h-5 text-yellow-400 mt-0.5" />
+                          <AlertCircle className="w-5 h-5 text-yellow-400 mt-0.5 flex-shrink-0" />
                           <p className="text-yellow-100 text-sm">{rec}</p>
                         </div>
                       ))}
@@ -1248,6 +1408,24 @@ export default function LoadTestPage() {
                 <div className="flex items-center justify-between mb-6">
                   <h2 className="text-xl font-semibold text-white">Test History</h2>
                   <div className="flex items-center gap-4">
+                    {testHistory.length > 0 && (
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={clearTestHistory}
+                          className="flex items-center gap-2 px-3 py-1.5 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                          Clear History
+                        </button>
+                        <button
+                          onClick={clearAllData}
+                          className="flex items-center gap-2 px-3 py-1.5 bg-red-800 text-white rounded-lg hover:bg-red-900 transition-colors text-sm"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                          Clear All Data
+                        </button>
+                      </div>
+                    )}
                     <div className="flex items-center gap-2">
                       <Search className="w-4 h-4 text-slate-400" />
                       <input
@@ -1303,7 +1481,11 @@ export default function LoadTestPage() {
                             <span className="text-sm text-slate-400">
                               {new Date(test.timestamp).toLocaleString()}
                             </span>
-                            <button className="text-blue-400 hover:text-blue-300">
+                            <button 
+                              onClick={() => viewHistoryDetails(test)}
+                              className="text-blue-400 hover:text-blue-300 transition-colors"
+                              title="View Details"
+                            >
                               <FileText className="w-4 h-4" />
                             </button>
                           </div>
@@ -1359,6 +1541,356 @@ export default function LoadTestPage() {
           </AnimatePresence>
         </div>
       </div>
+
+      {/* History Details Modal */}
+      {showHistoryDetails && selectedHistoryTest && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-slate-800 rounded-xl border border-slate-700 p-6 max-w-6xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-xl font-semibold text-white">Test Details - {selectedHistoryTest.name}</h3>
+              <button
+                onClick={closeHistoryDetails}
+                className="text-slate-400 hover:text-white transition-colors"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+            
+            {loadingHistoryDetails ? (
+              <div className="text-center py-12">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
+                <p className="text-slate-400">Loading detailed results...</p>
+              </div>
+            ) : (
+              <div className="space-y-6">
+                {/* Test Information */}
+                <div className="bg-slate-700 rounded-lg p-4">
+                  <h4 className="text-lg font-semibold text-white mb-4">Test Information</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <span className="text-slate-400">Test Name:</span>
+                      <span className="text-white ml-2">{selectedHistoryTest.name}</span>
+                    </div>
+                    <div>
+                      <span className="text-slate-400">Test ID:</span>
+                      <span className="text-white ml-2 font-mono text-sm">{selectedHistoryTest.test_id}</span>
+                    </div>
+                    <div>
+                      <span className="text-slate-400">Start Time:</span>
+                      <span className="text-white ml-2">{new Date(selectedHistoryTest.timestamp).toLocaleString()}</span>
+                    </div>
+                    <div>
+                      <span className="text-slate-400">Duration:</span>
+                      <span className="text-white ml-2">{formatDuration(selectedHistoryTest.duration)}</span>
+                    </div>
+                    <div>
+                      <span className="text-slate-400">Status:</span>
+                      <span className={`ml-2 font-medium ${
+                        selectedHistoryTest.status === 'completed' ? 'text-green-400' :
+                        selectedHistoryTest.status === 'failed' ? 'text-red-400' : 'text-yellow-400'
+                      }`}>
+                        {selectedHistoryTest.status.toUpperCase()}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-slate-400">Databases:</span>
+                      <span className="text-white ml-2">{selectedHistoryTest.databases.join(', ')}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Summary Metrics */}
+                <div className="bg-slate-700 rounded-lg p-4">
+                  <h4 className="text-lg font-semibold text-white mb-4">Summary Metrics</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-blue-400">{selectedHistoryTest.summary.total_requests.toLocaleString()}</div>
+                      <div className="text-sm text-slate-400">Total Requests</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-green-400">{selectedHistoryTest.summary.success_rate.toFixed(1)}%</div>
+                      <div className="text-sm text-slate-400">Success Rate</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-yellow-400">{formatTime(selectedHistoryTest.summary.avg_response_time)}</div>
+                      <div className="text-sm text-slate-400">Avg Response Time</div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Full Detailed Results - Only show if we have the full results */}
+                {selectedHistoryResults ? (
+                  <>
+                    {/* Performance Ranking */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      {selectedHistoryResults.comparison_summary.performance_ranking.map((rank, index) => (
+                        <div key={rank.database} className="bg-slate-700 rounded-lg p-4">
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="text-2xl font-bold text-slate-400">#{index + 1}</span>
+                            <Database className="w-6 h-6 text-slate-400" />
+                          </div>
+                          <h4 className="font-semibold text-white capitalize mb-1">{rank.database}</h4>
+                          <div className="space-y-1">
+                            <p className="text-sm text-slate-400">
+                              {formatTime(rank.avg_response_time)} avg response
+                            </p>
+                            <p className="text-sm text-slate-400">
+                              {formatRate(rank.throughput)} throughput
+                            </p>
+                            <p className="text-sm text-slate-400">
+                              {rank.success_rate.toFixed(1)}% success rate
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Key Metrics */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                      <div className="bg-gradient-to-r from-green-600 to-green-700 rounded-lg p-6">
+                        <div className="flex items-center gap-2 mb-2">
+                          <Zap className="w-6 h-6 text-white" />
+                          <h4 className="font-semibold text-white">Fastest Response</h4>
+                        </div>
+                        <p className="text-3xl font-bold text-white">
+                          {formatTime(selectedHistoryResults.comparison_summary.key_metrics.fastest_avg_response.avg_response_time)}
+                        </p>
+                        <p className="text-green-100 text-sm mt-1">
+                          {selectedHistoryResults.comparison_summary.key_metrics.fastest_avg_response.database}
+                        </p>
+                      </div>
+                      
+                      <div className="bg-gradient-to-r from-blue-600 to-blue-700 rounded-lg p-6">
+                        <div className="flex items-center gap-2 mb-2">
+                          <TrendingUp className="w-6 h-6 text-white" />
+                          <h4 className="font-semibold text-white">Highest Throughput</h4>
+                        </div>
+                        <p className="text-3xl font-bold text-white">
+                          {formatRate(selectedHistoryResults.comparison_summary.key_metrics.highest_throughput.requests_per_second)}
+                        </p>
+                        <p className="text-blue-100 text-sm mt-1">
+                          {selectedHistoryResults.comparison_summary.key_metrics.highest_throughput.database}
+                        </p>
+                      </div>
+                      
+                      <div className="bg-gradient-to-r from-purple-600 to-purple-700 rounded-lg p-6">
+                        <div className="flex items-center gap-2 mb-2">
+                          <CheckCircle className="w-6 h-6 text-white" />
+                          <h4 className="font-semibold text-white">Most Reliable</h4>
+                        </div>
+                        <p className="text-3xl font-bold text-white">
+                          {selectedHistoryResults.comparison_summary.key_metrics.most_reliable.success_rate.toFixed(1)}%
+                        </p>
+                        <p className="text-purple-100 text-sm mt-1">
+                          {selectedHistoryResults.comparison_summary.key_metrics.most_reliable.database}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Detailed Results by Database */}
+                    {Object.entries(selectedHistoryResults.detailed_results).map(([database, dbResults]) => (
+                      <div key={database} className="bg-slate-700 rounded-lg p-6">
+                        <h4 className="text-xl font-semibold text-white mb-6 capitalize flex items-center gap-2">
+                          <Database className="w-6 h-6" />
+                          {database} Database Results
+                        </h4>
+
+                        {/* Overall Metrics */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                          <div className="bg-slate-600 rounded-lg p-4">
+                            <div className="flex items-center gap-2 mb-2">
+                              <Target className="w-5 h-5 text-blue-400" />
+                              <span className="text-sm text-slate-400">Total Requests</span>
+                            </div>
+                            <p className="text-2xl font-bold text-white">
+                              {dbResults.metrics.overall.total_requests.toLocaleString()}
+                            </p>
+                            <p className="text-sm text-slate-400">
+                              {dbResults.metrics.overall.successful_requests.toLocaleString()} successful
+                            </p>
+                          </div>
+
+                          <div className="bg-slate-600 rounded-lg p-4">
+                            <div className="flex items-center gap-2 mb-2">
+                              <Clock className="w-5 h-5 text-green-400" />
+                              <span className="text-sm text-slate-400">Response Time</span>
+                            </div>
+                            <p className="text-2xl font-bold text-white">
+                              {formatTime(dbResults.metrics.overall.avg_response_time)}
+                            </p>
+                            <p className="text-sm text-slate-400">
+                              P95: {formatTime(dbResults.metrics.overall.p95_response_time)}
+                            </p>
+                          </div>
+
+                          <div className="bg-slate-600 rounded-lg p-4">
+                            <div className="flex items-center gap-2 mb-2">
+                              <Zap className="w-5 h-5 text-yellow-400" />
+                              <span className="text-sm text-slate-400">Throughput</span>
+                            </div>
+                            <p className="text-2xl font-bold text-white">
+                              {formatRate(dbResults.metrics.overall.requests_per_second)}
+                            </p>
+                            <p className="text-sm text-slate-400">
+                              {dbResults.metrics.overall.success_rate.toFixed(1)}% success rate
+                            </p>
+                          </div>
+
+                          <div className="bg-slate-600 rounded-lg p-4">
+                            <div className="flex items-center gap-2 mb-2">
+                              <AlertCircle className="w-5 h-5 text-red-400" />
+                              <span className="text-sm text-slate-400">Errors</span>
+                            </div>
+                            <p className="text-2xl font-bold text-white">
+                              {dbResults.metrics.overall.failed_requests.toLocaleString()}
+                            </p>
+                            <p className="text-sm text-slate-400">
+                              {((dbResults.metrics.overall.failed_requests / dbResults.metrics.overall.total_requests) * 100).toFixed(1)}% failure rate
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Response Time Breakdown */}
+                        <div className="mb-6">
+                          <h5 className="text-lg font-semibold text-white mb-4">Response Time Distribution</h5>
+                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+                            <div className="bg-slate-600 rounded-lg p-3">
+                              <div className="text-sm text-slate-400">Min</div>
+                              <div className="text-lg font-bold text-white">{formatTime(dbResults.metrics.overall.min_response_time)}</div>
+                            </div>
+                            <div className="bg-slate-600 rounded-lg p-3">
+                              <div className="text-sm text-slate-400">Median</div>
+                              <div className="text-lg font-bold text-white">{formatTime(dbResults.metrics.overall.median_response_time)}</div>
+                            </div>
+                            <div className="bg-slate-600 rounded-lg p-3">
+                              <div className="text-sm text-slate-400">Average</div>
+                              <div className="text-lg font-bold text-white">{formatTime(dbResults.metrics.overall.avg_response_time)}</div>
+                            </div>
+                            <div className="bg-slate-600 rounded-lg p-3">
+                              <div className="text-sm text-slate-400">P95</div>
+                              <div className="text-lg font-bold text-white">{formatTime(dbResults.metrics.overall.p95_response_time)}</div>
+                            </div>
+                            <div className="bg-slate-600 rounded-lg p-3">
+                              <div className="text-sm text-slate-400">Max</div>
+                              <div className="text-lg font-bold text-white">{formatTime(dbResults.metrics.overall.max_response_time)}</div>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Per-Scenario Metrics */}
+                        {dbResults.metrics.by_scenario && Object.keys(dbResults.metrics.by_scenario).length > 0 && (
+                          <div className="mb-6">
+                            <h5 className="text-lg font-semibold text-white mb-4">Performance by API Endpoint</h5>
+                            <div className="space-y-3">
+                              {Object.entries(dbResults.metrics.by_scenario).map(([scenario, metrics]: [string, any]) => (
+                                <div key={scenario} className="bg-slate-600 rounded-lg p-4">
+                                  <div className="flex items-center justify-between mb-2">
+                                    <h6 className="font-medium text-white">{scenario}</h6>
+                                    <span className="text-sm text-slate-400">
+                                      {metrics.total_requests} requests
+                                    </span>
+                                  </div>
+                                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                                    <div>
+                                      <span className="text-sm text-slate-400">Avg Response:</span>
+                                      <span className="text-white ml-2">{formatTime(metrics.avg_response_time)}</span>
+                                    </div>
+                                    <div>
+                                      <span className="text-sm text-slate-400">Success Rate:</span>
+                                      <span className="text-white ml-2">{metrics.success_rate.toFixed(1)}%</span>
+                                    </div>
+                                    <div>
+                                      <span className="text-sm text-slate-400">P95:</span>
+                                      <span className="text-white ml-2">{formatTime(metrics.p95_response_time)}</span>
+                                    </div>
+                                    <div>
+                                      <span className="text-sm text-slate-400">Errors:</span>
+                                      <span className="text-white ml-2">{metrics.failed_requests}</span>
+                                    </div>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Error Analysis */}
+                        {dbResults.metrics.errors && Object.keys(dbResults.metrics.errors).length > 0 && (
+                          <div className="mb-6">
+                            <h5 className="text-lg font-semibold text-white mb-4">Error Analysis</h5>
+                            <div className="space-y-3">
+                              {Object.entries(dbResults.metrics.errors).map(([errorType, errorData]: [string, any]) => (
+                                <div key={errorType} className="bg-red-900/20 border border-red-800 rounded-lg p-4">
+                                  <div className="flex items-center justify-between mb-2">
+                                    <h6 className="font-medium text-red-300">{errorType}</h6>
+                                    <span className="text-sm text-red-400">
+                                      {errorData.count} occurrences
+                                    </span>
+                                  </div>
+                                  <p className="text-sm text-red-100 mb-2">{errorData.message}</p>
+                                  {errorData.endpoints && (
+                                    <div>
+                                      <span className="text-sm text-red-400">Affected endpoints:</span>
+                                      <div className="flex flex-wrap gap-2 mt-1">
+                                        {errorData.endpoints.map((endpoint: string, idx: number) => (
+                                          <span key={idx} className="text-xs bg-red-800 text-red-200 px-2 py-1 rounded">
+                                            {endpoint}
+                                          </span>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+
+                    {/* Recommendations */}
+                    <div className="bg-slate-700 rounded-lg p-4">
+                      <h4 className="text-lg font-semibold text-white mb-4">Performance Recommendations</h4>
+                      <div className="space-y-3">
+                        {selectedHistoryResults.comparison_summary.recommendations.map((rec, index) => (
+                          <div key={index} className="flex items-start gap-3 p-3 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
+                            <AlertCircle className="w-5 h-5 text-yellow-400 mt-0.5 flex-shrink-0" />
+                            <p className="text-yellow-100 text-sm">{rec}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <div className="bg-slate-700 rounded-lg p-6 text-center">
+                    <AlertCircle className="w-12 h-12 text-yellow-400 mx-auto mb-4" />
+                    <h4 className="text-lg font-semibold text-white mb-2">Detailed Results Not Available</h4>
+                    <p className="text-slate-400 mb-4">
+                      Full test results are not available from the backend. This could be because:
+                    </p>
+                    <ul className="text-sm text-slate-400 text-left max-w-md mx-auto">
+                      <li>• The backend server was restarted after the test</li>
+                      <li>• The test results have been cleared from memory</li>
+                      <li>• The test was run with a different backend instance</li>
+                    </ul>
+                    <p className="text-slate-400 mt-4">Only summary metrics are shown above.</p>
+                  </div>
+                )}
+
+                {/* Actions */}
+                <div className="flex justify-end gap-3">
+                  <button
+                    onClick={closeHistoryDetails}
+                    className="px-4 py-2 bg-slate-600 text-white rounded-lg hover:bg-slate-500 transition-colors"
+                  >
+                    Close
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   )
 } 

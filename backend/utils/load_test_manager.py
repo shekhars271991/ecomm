@@ -18,11 +18,11 @@ class LoadTestManager:
         self.results = {}
         self.suppress_logging = suppress_logging
         self.test_scenarios = {
-            'products': {'weight': 35, 'endpoint': '/api/products', 'method': 'GET'},
-            'category': {'weight': 25, 'endpoint': '/api/products', 'method': 'GET', 'params': {'category': 'random'}},
-            'search': {'weight': 20, 'endpoint': '/api/products', 'method': 'GET', 'params': {'search': 'random'}},
-            'individual': {'weight': 15, 'endpoint': '/api/products/{id}', 'method': 'GET'},
-            'cart': {'weight': 5, 'endpoint': '/api/cart', 'method': 'POST'}
+            # 'products': {'weight': 35, 'endpoint': '/api/products', 'method': 'GET'},
+            'category': {'weight': 40, 'endpoint': '/api/products', 'method': 'GET', 'params': {'category': 'random'}},
+            # 'search': {'weight': 20, 'endpoint': '/api/products', 'method': 'GET', 'params': {'search': 'random'}},
+            'individual': {'weight': 30, 'endpoint': '/api/products/{id}', 'method': 'GET'},
+            'cart': {'weight': 30, 'endpoint': '/api/cart', 'method': 'POST'}
         }
         self.search_terms = ['chicken', 'organic', 'fresh', 'milk', 'bread', 'apple', 'cheese', 'pasta', 'rice', 'eggs']
         self.categories = list(range(1, 11))  # Categories 1-10
@@ -36,6 +36,7 @@ class LoadTestManager:
         self.failed_requests = 0
         self.start_time = None
         self.last_progress_update = 0
+        self.response_times = []  # Track actual response times for live metrics
         
         # Setup logging
         if not suppress_logging:
@@ -156,9 +157,12 @@ class LoadTestManager:
                 # Calculate success rate
                 success_rate = (self.successful_requests / self.completed_requests * 100) if self.completed_requests > 0 else 0
                 
+                # Calculate real-time average response time from actual measurements
+                avg_response_time = statistics.mean(self.response_times) if self.response_times else 0
+                
                 # Only call callback every 0.1 seconds to avoid spam
                 if current_time - self.last_progress_update > 0.1:
-                    progress_callback(database, self.completed_requests, self.total_requests, current_rps, success_rate, self.failed_requests)
+                    progress_callback(database, self.completed_requests, self.total_requests, current_rps, success_rate, self.failed_requests, avg_response_time)
                     self.last_progress_update = current_time
     
     async def _simulate_user(self, user_id: int, database: str, requests_per_user: int, 
@@ -189,6 +193,11 @@ class LoadTestManager:
                     self.successful_requests += 1
                 else:
                     self.failed_requests += 1
+                
+                # Record response time for live metrics (keep last 100 for performance)
+                self.response_times.append(result['response_time'])
+                if len(self.response_times) > 100:
+                    self.response_times = self.response_times[-100:]
             
             # Update progress callback
             self._update_progress(database, progress_callback)
@@ -211,6 +220,7 @@ class LoadTestManager:
             self.failed_requests = 0
             self.start_time = time.time()
             self.last_progress_update = 0
+            self.response_times = []  # Reset response times for new test
         
         # Create tasks for all users
         tasks = []
