@@ -361,23 +361,7 @@ export default function HomePage() {
                         </div>
                       </div>
                     </button>
-                    <button
-                      onClick={() => {
-                        handleDatabaseSwitch('aerospike')
-                        setShowDatabaseDropdown(false)
-                      }}
-                      className={`w-full text-left px-3 py-2 rounded-lg transition-colors ${
-                        (isHydrated ? currentDatabase : 'mysql') === 'aerospike' ? 'bg-primary-100 text-primary-700' : 'hover:bg-neutral-100'
-                      }`}
-                    >
-                      <div className="flex items-center space-x-2">
-                        <Database className="w-4 h-4" />
-                        <div>
-                          <span className="font-medium block">Aerospike</span>
-                          <span className="text-xs text-neutral-500">NoSQL Database</span>
-                        </div>
-                      </div>
-                    </button>
+
                     <button
                       onClick={() => {
                         handleDatabaseSwitch('mongodb')
@@ -392,6 +376,23 @@ export default function HomePage() {
                         <div>
                           <span className="font-medium block">MongoDB</span>
                           <span className="text-xs text-neutral-500">Document Database</span>
+                        </div>
+                      </div>
+                    </button>
+                    <button
+                      onClick={() => {
+                        handleDatabaseSwitch('aerospike')
+                        setShowDatabaseDropdown(false)
+                      }}
+                      className={`w-full text-left px-3 py-2 rounded-lg transition-colors ${
+                        (isHydrated ? currentDatabase : 'mysql') === 'aerospike' ? 'bg-primary-100 text-primary-700' : 'hover:bg-neutral-100'
+                      }`}
+                    >
+                      <div className="flex items-center space-x-2">
+                        <Database className="w-4 h-4" />
+                        <div>
+                          <span className="font-medium block">Aerospike</span>
+                          <span className="text-xs text-neutral-500">NoSQL Database</span>
                         </div>
                       </div>
                     </button>

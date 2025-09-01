@@ -34,6 +34,16 @@ export default function ProductsPage() {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null)
   const [isProductModalOpen, setIsProductModalOpen] = useState(false)
+  const [showFilters, setShowFilters] = useState(false)
+  const [filterPrice, setFilterPrice] = useState<[number, number]>([0, 1000])
+  const [filterRating, setFilterRating] = useState<number | null>(null)
+  const [filterDiscount, setFilterDiscount] = useState<boolean | null>(null)
+  const [filterFeature, setFilterFeature] = useState<string>('')
+  const [filterStock, setFilterStock] = useState<number | null>(null)
+  const [filterAvailability, setFilterAvailability] = useState<boolean | null>(null)
+  const [filterApplied, setFilterApplied] = useState(false)
+  const [filteredProducts, setFilteredProducts] = useState<any[]>([])
+  const [filterLoading, setFilterLoading] = useState(false)
 
   // Fetch categories
   const { data: categories = [], isLoading: categoriesLoading } = useQuery('categories', async () => {
@@ -238,6 +248,55 @@ export default function ProductsPage() {
     return log.database_type === queryFilter
   })
 
+  // Fetch filtered products
+  const fetchFilteredProducts = async () => {
+    setFilterLoading(true)
+    let url = '/api/products/filter/advanced?'
+    const params = new URLSearchParams()
+    if (filterPrice[0] > 0) params.append('min_price', filterPrice[0].toString())
+    if (filterPrice[1] < 1000) params.append('max_price', filterPrice[1].toString())
+    if (filterRating) params.append('min_rating', filterRating.toString())
+    if (filterDiscount !== null) params.append('has_discount', filterDiscount ? 'true' : 'false')
+    if (filterFeature) params.append('feature_keyword', filterFeature)
+    if (filterStock) params.append('min_stock', filterStock.toString())
+    if (filterAvailability !== null) params.append('is_available', filterAvailability ? 'true' : 'false')
+    if (selectedCategory) params.append('category_id', selectedCategory.toString())
+    if (searchQuery) params.append('search_term', searchQuery)
+    url += params.toString()
+    try {
+      const response = await fetch(url, { headers: { 'X-Database': currentDatabase } })
+      const data = await response.json()
+      if (data.success) {
+        setFilteredProducts(data.data || [])
+        setFilterApplied(true)
+      } else {
+        toast.error(data.message || 'Failed to apply filters')
+      }
+    } catch (error) {
+      console.error('Filter error:', error)
+      toast.error('Failed to apply filters')
+    } finally {
+      setFilterLoading(false)
+    }
+  }
+
+  // Handle filter apply
+  const handleApplyFilters = () => {
+    fetchFilteredProducts()
+  }
+
+  // Handle filter reset
+  const handleResetFilters = () => {
+    setFilterPrice([0, 1000])
+    setFilterRating(null)
+    setFilterDiscount(null)
+    setFilterFeature('')
+    setFilterStock(null)
+    setFilterAvailability(null)
+    setFilterApplied(false)
+    setFilteredProducts([])
+  }
+
   useEffect(() => {
     if (showQueryLog) {
       fetchQueryLogs()
@@ -364,23 +423,7 @@ export default function ProductsPage() {
                         </div>
                       </div>
                     </button>
-                    <button
-                      onClick={() => {
-                        handleDatabaseSwitch('aerospike')
-                        setShowDatabaseDropdown(false)
-                      }}
-                      className={`w-full text-left px-3 py-2 rounded-lg transition-colors ${
-                        (isHydrated ? currentDatabase : 'mysql') === 'aerospike' ? 'bg-primary-100 text-primary-700' : 'hover:bg-neutral-100'
-                      }`}
-                    >
-                      <div className="flex items-center space-x-2">
-                        <Database className="w-4 h-4" />
-                        <div>
-                          <span className="font-medium block">Aerospike</span>
-                          <span className="text-xs text-neutral-500">NoSQL Database</span>
-                        </div>
-                      </div>
-                    </button>
+
                     <button
                       onClick={() => {
                         handleDatabaseSwitch('mongodb')
@@ -395,6 +438,23 @@ export default function ProductsPage() {
                         <div>
                           <span className="font-medium block">MongoDB</span>
                           <span className="text-xs text-neutral-500">Document Database</span>
+                        </div>
+                      </div>
+                    </button>
+                    <button
+                      onClick={() => {
+                        handleDatabaseSwitch('aerospike')
+                        setShowDatabaseDropdown(false)
+                      }}
+                      className={`w-full text-left px-3 py-2 rounded-lg transition-colors ${
+                        (isHydrated ? currentDatabase : 'mysql') === 'aerospike' ? 'bg-primary-100 text-primary-700' : 'hover:bg-neutral-100'
+                      }`}
+                    >
+                      <div className="flex items-center space-x-2">
+                        <Database className="w-4 h-4" />
+                        <div>
+                          <span className="font-medium block">Aerospike</span>
+                          <span className="text-xs text-neutral-500">NoSQL Database</span>
                         </div>
                       </div>
                     </button>
@@ -450,8 +510,112 @@ export default function ProductsPage() {
 
       <div className="container mx-auto px-4 py-6">
         <div className="flex gap-8">
-          {/* Left Sidebar - Categories */}
-          <div className="hidden lg:block w-64 flex-shrink-0">
+          {/* Left Sidebar - Categories & Filters */}
+          <div className="hidden lg:block w-80 flex-shrink-0">
+            <div className="bg-white rounded-2xl shadow-soft border border-neutral-200 p-6 sticky top-24 mb-6">
+              <h3 className="text-lg font-bold text-neutral-800 mb-4">Filters</h3>
+              <div className="space-y-4">
+                {/* Price Range */}
+                <div>
+                  <label className="block text-sm font-medium mb-1">Price Range (₹)</label>
+                  <div className="flex gap-2 items-center">
+                    <input
+                      type="number"
+                      min={0}
+                      max={filterPrice[1]}
+                      value={filterPrice[0]}
+                      onChange={e => setFilterPrice([Number(e.target.value), filterPrice[1]])}
+                      className="w-20 rounded-lg border border-neutral-200 p-2 text-sm"
+                    />
+                    <span className="text-neutral-500">to</span>
+                    <input
+                      type="number"
+                      min={filterPrice[0]}
+                      max={1000}
+                      value={filterPrice[1]}
+                      onChange={e => setFilterPrice([filterPrice[0], Number(e.target.value)])}
+                      className="w-20 rounded-lg border border-neutral-200 p-2 text-sm"
+                    />
+                  </div>
+                </div>
+                {/* Rating */}
+                <div>
+                  <label className="block text-sm font-medium mb-1">Min Rating</label>
+                  <select
+                    className="w-full rounded-lg border border-neutral-200 p-2 text-sm"
+                    value={filterRating ?? ''}
+                    onChange={e => setFilterRating(e.target.value ? Number(e.target.value) : null)}
+                  >
+                    <option value="">Any</option>
+                    {[5, 4.5, 4, 3.5, 3].map(r => (
+                      <option key={r} value={r}>{r}+</option>
+                    ))}
+                  </select>
+                </div>
+                {/* Discount */}
+                <div>
+                  <label className="block text-sm font-medium mb-1">Discount</label>
+                  <select
+                    className="w-full rounded-lg border border-neutral-200 p-2 text-sm"
+                    value={filterDiscount === null ? '' : filterDiscount ? 'true' : 'false'}
+                    onChange={e => setFilterDiscount(e.target.value === '' ? null : e.target.value === 'true')}
+                  >
+                    <option value="">Any</option>
+                    <option value="true">Has Discount</option>
+                    <option value="false">No Discount</option>
+                  </select>
+                </div>
+                {/* Feature */}
+                <div>
+                  <label className="block text-sm font-medium mb-1">Feature</label>
+                  <input
+                    type="text"
+                    className="w-full rounded-lg border border-neutral-200 p-2 text-sm"
+                    placeholder="e.g. Kosher, Gluten-Free"
+                    value={filterFeature}
+                    onChange={e => setFilterFeature(e.target.value)}
+                  />
+                </div>
+                {/* Stock (MySQL only) */}
+                {currentDatabase === 'mysql' && (
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Min Stock</label>
+                    <input
+                      type="number"
+                      className="w-full rounded-lg border border-neutral-200 p-2 text-sm"
+                      min={0}
+                      value={filterStock ?? ''}
+                      onChange={e => setFilterStock(e.target.value ? Number(e.target.value) : null)}
+                    />
+                  </div>
+                )}
+                {/* Availability (MySQL only) */}
+                {currentDatabase === 'mysql' && (
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Availability</label>
+                    <select
+                      className="w-full rounded-lg border border-neutral-200 p-2 text-sm"
+                      value={filterAvailability === null ? '' : filterAvailability ? 'true' : 'false'}
+                      onChange={e => setFilterAvailability(e.target.value === '' ? null : e.target.value === 'true')}
+                    >
+                      <option value="">Any</option>
+                      <option value="true">Available</option>
+                      <option value="false">Unavailable</option>
+                    </select>
+                  </div>
+                )}
+                {/* Apply/Reset Buttons */}
+                <div className="flex gap-2 mt-4">
+                  <button className="btn btn-primary flex-1" onClick={handleApplyFilters} disabled={filterLoading}>
+                    {filterLoading ? 'Filtering...' : 'Apply Filters'}
+                  </button>
+                  <button className="btn btn-secondary flex-1" onClick={handleResetFilters} disabled={filterLoading}>
+                    Reset
+                  </button>
+                </div>
+              </div>
+            </div>
+            {/* Categories */}
             <div className="bg-white rounded-2xl shadow-soft border border-neutral-200 p-6 sticky top-24">
               <h3 className="text-lg font-bold text-neutral-800 mb-4">Categories</h3>
               
@@ -509,6 +673,12 @@ export default function ProductsPage() {
 
           {/* Main Content */}
           <div className="flex-1">
+            {/* Filter Button for Mobile */}
+            <div className="lg:hidden flex justify-end mb-4">
+              <button className="btn btn-primary" onClick={() => setShowFilters(true)}>
+                Filters
+              </button>
+            </div>
             {/* Page Header */}
             <div className="mb-6">
               <h1 className="text-3xl font-bold text-neutral-800 mb-2">{selectedCategoryName}</h1>
@@ -519,18 +689,14 @@ export default function ProductsPage() {
 
             {/* Products Grid */}
             <div className="product-grid">
-              {productsLoading ? (
-                Array.from({ length: 12 }).map((_, index) => (
-                  <div key={index} className="card animate-pulse">
-                    <div className="aspect-square bg-neutral-200"></div>
-                    <div className="p-4">
-                      <div className="h-4 bg-neutral-200 rounded mb-2"></div>
-                      <div className="h-6 bg-neutral-200 rounded"></div>
-                    </div>
-                  </div>
-                ))
-              ) : products.length > 0 ? (
-                products.map((product) => (
+              {(filterApplied ? filteredProducts : products).length === 0 && !productsLoading ? (
+                <div className="col-span-full text-center py-12">
+                  <ShoppingCart className="w-16 h-16 text-neutral-300 mx-auto mb-4" />
+                  <h3 className="text-lg font-semibold text-neutral-600 mb-2">No products found</h3>
+                  <p className="text-neutral-500">Try searching for different terms or browse all categories.</p>
+                </div>
+              ) : (
+                (filterApplied ? filteredProducts : products).map((product) => (
                                   <motion.div
                   key={product.id}
                   whileHover={{ y: -5 }}
@@ -627,12 +793,6 @@ export default function ProductsPage() {
                   </div>
                 </motion.div>
                 ))
-              ) : (
-                <div className="col-span-full text-center py-12">
-                  <ShoppingCart className="w-16 h-16 text-neutral-300 mx-auto mb-4" />
-                  <h3 className="text-lg font-semibold text-neutral-600 mb-2">No products found</h3>
-                  <p className="text-neutral-500">Try searching for different terms or browse all categories.</p>
-                </div>
               )}
             </div>
           </div>
@@ -1058,6 +1218,128 @@ export default function ProductsPage() {
                 </div>
               )}
             </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Mobile Filter Modal */}
+      <AnimatePresence>
+        {showFilters && (
+          <motion.div
+            initial={{ opacity: 0, y: '-100%' }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: '-100%' }}
+            className="fixed inset-0 z-50 bg-white md:hidden"
+          >
+            <div className="p-4">
+              <div className="flex items-center justify-between mb-8">
+                <h2 className="text-xl font-bold">Filters</h2>
+                <button onClick={() => setShowFilters(false)}>
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
+              
+              <div className="space-y-4">
+                {/* Price Range */}
+                <div>
+                  <label className="block text-sm font-medium mb-1">Price Range ($)</label>
+                  <div className="flex gap-2 items-center">
+                    <input
+                      type="number"
+                      min={0}
+                      max={filterPrice[1]}
+                      value={filterPrice[0]}
+                      onChange={e => setFilterPrice([Number(e.target.value), filterPrice[1]])}
+                      className="w-20 rounded-lg border border-neutral-200 p-2 text-sm"
+                    />
+                    <span className="text-neutral-500">to</span>
+                    <input
+                      type="number"
+                      min={filterPrice[0]}
+                      max={1000}
+                      value={filterPrice[1]}
+                      onChange={e => setFilterPrice([filterPrice[0], Number(e.target.value)])}
+                      className="w-20 rounded-lg border border-neutral-200 p-2 text-sm"
+                    />
+                  </div>
+                </div>
+                {/* Rating */}
+                <div>
+                  <label className="block text-sm font-medium mb-1">Min Rating</label>
+                  <select
+                    className="w-full rounded-lg border border-neutral-200 p-2 text-sm"
+                    value={filterRating ?? ''}
+                    onChange={e => setFilterRating(e.target.value ? Number(e.target.value) : null)}
+                  >
+                    <option value="">Any</option>
+                    {[5, 4.5, 4, 3.5, 3].map(r => (
+                      <option key={r} value={r}>{r}+</option>
+                    ))}
+                  </select>
+                </div>
+                {/* Discount */}
+                <div>
+                  <label className="block text-sm font-medium mb-1">Discount</label>
+                  <select
+                    className="w-full rounded-lg border border-neutral-200 p-2 text-sm"
+                    value={filterDiscount === null ? '' : filterDiscount ? 'true' : 'false'}
+                    onChange={e => setFilterDiscount(e.target.value === '' ? null : e.target.value === 'true')}
+                  >
+                    <option value="">Any</option>
+                    <option value="true">Has Discount</option>
+                    <option value="false">No Discount</option>
+                  </select>
+                </div>
+                {/* Feature */}
+                <div>
+                  <label className="block text-sm font-medium mb-1">Feature</label>
+                  <input
+                    type="text"
+                    className="w-full rounded-lg border border-neutral-200 p-2 text-sm"
+                    placeholder="e.g. Kosher, Gluten-Free"
+                    value={filterFeature}
+                    onChange={e => setFilterFeature(e.target.value)}
+                  />
+                </div>
+                {/* Stock (MySQL only) */}
+                {currentDatabase === 'mysql' && (
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Min Stock</label>
+                    <input
+                      type="number"
+                      className="w-full rounded-lg border border-neutral-200 p-2 text-sm"
+                      min={0}
+                      value={filterStock ?? ''}
+                      onChange={e => setFilterStock(e.target.value ? Number(e.target.value) : null)}
+                    />
+                  </div>
+                )}
+                {/* Availability (MySQL only) */}
+                {currentDatabase === 'mysql' && (
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Availability</label>
+                    <select
+                      className="w-full rounded-lg border border-neutral-200 p-2 text-sm"
+                      value={filterAvailability === null ? '' : filterAvailability ? 'true' : 'false'}
+                      onChange={e => setFilterAvailability(e.target.value === '' ? null : e.target.value === 'true')}
+                    >
+                      <option value="">Any</option>
+                      <option value="true">Available</option>
+                      <option value="false">Unavailable</option>
+                    </select>
+                  </div>
+                )}
+                {/* Apply/Reset Buttons */}
+                <div className="flex gap-2 mt-4">
+                  <button className="btn btn-primary flex-1" onClick={() => { handleApplyFilters(); setShowFilters(false) }} disabled={filterLoading}>
+                    {filterLoading ? 'Filtering...' : 'Apply Filters'}
+                  </button>
+                  <button className="btn btn-secondary flex-1" onClick={() => { handleResetFilters(); setShowFilters(false) }} disabled={filterLoading}>
+                    Reset
+                  </button>
+                </div>
+              </div>
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
