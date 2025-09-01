@@ -89,6 +89,16 @@ def setup_application():
     api.add_resource(api_resources['CategoriesResource'], '/api/categories')
     api.add_resource(api_resources['ProductsResource'], '/api/products')
     api.add_resource(api_resources['ProductResource'], '/api/products/<int:product_id>')
+    
+    # Filter endpoints
+    api.add_resource(api_resources['ProductsByPriceRangeResource'], '/api/products/filter/price')
+    api.add_resource(api_resources['ProductsByRatingResource'], '/api/products/filter/rating')
+    api.add_resource(api_resources['ProductsByDiscountStatusResource'], '/api/products/filter/discount')
+    api.add_resource(api_resources['ProductsByFeatureResource'], '/api/products/filter/feature')
+    api.add_resource(api_resources['ProductsByStockLevelResource'], '/api/products/filter/stock')
+    api.add_resource(api_resources['ProductsByAvailabilityResource'], '/api/products/filter/availability')
+    api.add_resource(api_resources['ProductsAdvancedFilterResource'], '/api/products/filter/advanced')
+    
     api.add_resource(api_resources['OrdersResource'], '/api/orders')
     api.add_resource(api_resources['CartResource'], '/api/cart')
     api.add_resource(api_resources['CartItemResource'], '/api/cart/<int:item_id>')

@@ -97,7 +97,90 @@ class UnifiedDatabaseManager:
             manager.init_sample_data()
         else:
             print(f"Sample data initialization not supported for {self.current_db}")
-        
+    
+    # Filter operations - delegate to current database manager
+    def get_products_by_price_range(self, min_price: float, max_price: float) -> List[Dict]:
+        """Get products within a specific price range from current database"""
+        manager = self.get_current_manager()
+        if hasattr(manager, 'get_products_by_price_range'):
+            return manager.get_products_by_price_range(min_price, max_price)
+        else:
+            print(f"Price range filtering not supported for {self.current_db}")
+            return []
+    
+    def get_products_by_rating(self, min_rating: float) -> List[Dict]:
+        """Get products with minimum rating from current database"""
+        manager = self.get_current_manager()
+        if hasattr(manager, 'get_products_by_rating'):
+            return manager.get_products_by_rating(min_rating)
+        else:
+            print(f"Rating filtering not supported for {self.current_db}")
+            return []
+    
+    def get_products_by_discount_status(self, has_discount: bool = True) -> List[Dict]:
+        """Get products by discount status from current database"""
+        manager = self.get_current_manager()
+        if hasattr(manager, 'get_products_by_discount_status'):
+            return manager.get_products_by_discount_status(has_discount)
+        else:
+            print(f"Discount status filtering not supported for {self.current_db}")
+            return []
+    
+    def get_products_by_feature(self, feature_keyword: str) -> List[Dict]:
+        """Get products containing specific features from current database"""
+        manager = self.get_current_manager()
+        if hasattr(manager, 'get_products_by_feature'):
+            return manager.get_products_by_feature(feature_keyword)
+        else:
+            print(f"Feature filtering not supported for {self.current_db}")
+            return []
+    
+    def get_products_by_stock_level(self, min_stock: int = 0) -> List[Dict]:
+        """Get products with minimum stock level from current database"""
+        manager = self.get_current_manager()
+        if hasattr(manager, 'get_products_by_stock_level'):
+            return manager.get_products_by_stock_level(min_stock)
+        else:
+            print(f"Stock level filtering not supported for {self.current_db}")
+            return []
+    
+    def get_products_by_availability(self, is_available: bool = True) -> List[Dict]:
+        """Get products by availability status from current database"""
+        manager = self.get_current_manager()
+        if hasattr(manager, 'get_products_by_availability'):
+            return manager.get_products_by_availability(is_available)
+        else:
+            print(f"Availability filtering not supported for {self.current_db}")
+            return []
+    
+    def get_products_advanced_filter(self, 
+                                    min_price: Optional[float] = None,
+                                    max_price: Optional[float] = None,
+                                    min_rating: Optional[float] = None,
+                                    category_id: Optional[int] = None,
+                                    has_discount: Optional[bool] = None,
+                                    feature_keyword: Optional[str] = None,
+                                    min_stock: Optional[int] = None,
+                                    is_available: Optional[bool] = None,
+                                    search_term: Optional[str] = None) -> List[Dict]:
+        """Advanced product filtering with multiple criteria from current database"""
+        manager = self.get_current_manager()
+        if hasattr(manager, 'get_products_advanced_filter'):
+            return manager.get_products_advanced_filter(
+                min_price=min_price,
+                max_price=max_price,
+                min_rating=min_rating,
+                category_id=category_id,
+                has_discount=has_discount,
+                feature_keyword=feature_keyword,
+                min_stock=min_stock,
+                is_available=is_available,
+                search_term=search_term
+            )
+        else:
+            print(f"Advanced filtering not supported for {self.current_db}")
+            return []
+    
     def log_query(self, operation_type: str, query_description: str, start_time: float, end_time: float, result_count: int = 0):
         """Legacy method - now delegated to individual managers"""
         self.get_current_manager().log_query(operation_type, query_description, start_time, end_time, result_count) 

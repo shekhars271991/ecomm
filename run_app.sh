@@ -136,10 +136,10 @@ else
 fi
 
 # Check if backend dependencies are installed
-if [[ ! -d "backend/venv" ]] && [[ ! -f "backend/.venv_created" ]]; then
+if ! python3 -c "import flask" 2>/dev/null; then
     echo -e "${YELLOW}📦 Installing backend dependencies...${NC}"
     cd backend
-    pip install -r requirements.txt
+    pip3 install -r requirements.txt
     touch .venv_created
     cd ..
     echo -e "${GREEN}✅ Backend dependencies installed${NC}"
@@ -170,9 +170,9 @@ if [[ "$FRONTEND_TYPE" == "next" ]]; then
     fi
 else
     # Check if Python frontend dependencies are installed
-    if ! python -c "import requests" 2>/dev/null; then
+    if ! python3 -c "import requests" 2>/dev/null; then
         echo -e "${YELLOW}📦 Installing Python frontend dependencies...${NC}"
-        pip install requests
+        pip3 install requests
         echo -e "${GREEN}✅ Python frontend dependencies installed${NC}"
     fi
 fi
@@ -188,14 +188,14 @@ if [[ "$REFRESH_DATA" == true ]]; then
     else
         echo -e "${YELLOW}🔄 Backend will refresh with CSV data (19 categories)${NC}"
     fi
-    python app.py --refresh --dataloader "$DATALOADER_TYPE" > ../backend.log 2>&1 &
+    python3 app.py --refresh --dataloader "$DATALOADER_TYPE" > ../backend.log 2>&1 &
 else
     if [[ "$DATALOADER_TYPE" == "default" ]]; then
         echo -e "${BLUE}🔧 Backend starting with sample data (6 categories)${NC}"
     else
         echo -e "${BLUE}🔧 Backend starting with CSV data (19 categories)${NC}"
     fi
-    python app.py --dataloader "$DATALOADER_TYPE" > ../backend.log 2>&1 &
+    python3 app.py --dataloader "$DATALOADER_TYPE" > ../backend.log 2>&1 &
 fi
 
 BACKEND_PID=$!

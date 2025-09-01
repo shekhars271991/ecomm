@@ -136,8 +136,9 @@ frontend.log
 *.temp
 *.bak
 
-# Node.js (in case of frontend dependencies)
-node_modules/
+# Node.js dependencies (specific to frontend directories)
+frontend-next/node_modules/
+frontend/node_modules/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*

@@ -366,4 +366,339 @@ class MongoManager:
         """Close MongoDB connection"""
         if self.mongo_client:
             self.mongo_client.close()
-            print("MongoDB connection closed") 
+            self.mongo_client = None
+            self.database = None
+    
+    # Filter operations
+    def get_products_by_price_range(self, min_price: float, max_price: float) -> List[Dict]:
+        """Get products within a specific price range using MongoDB find with filters"""
+        if self.database is None:
+            return []
+        
+        start_time = time.time()
+        
+        try:
+            query_filter = {
+                'price': {
+                    '$gte': min_price,
+                    '$lte': max_price
+                }
+            }
+            
+            products_cursor = self.database.products.find(query_filter)
+            products = []
+            
+            for product in products_cursor:
+                products.append({
+                    'id': product.get('id'),
+                    'name': product.get('name'),
+                    'description': product.get('description'),
+                    'price': product.get('price'),
+                    'image_url': product.get('image_url'),
+                    'stock': product.get('stock'),
+                    'category_id': product.get('category_id'),
+                    'is_available': product.get('is_available'),
+                    'rating': product.get('rating'),
+                    'discount': product.get('discount'),
+                    'feature': product.get('feature'),
+                    'product_description': product.get('product_description')
+                })
+            
+            end_time = time.time()
+            query_description = f"db.products.find({{price: {{$gte: {min_price}, $lte: {max_price}}}}})"
+            self.log_query('FIND', query_description, start_time, end_time, len(products))
+            return products
+            
+        except Exception as e:
+            end_time = time.time()
+            self.log_query('FIND', f'db.products.find price filter ERROR: {str(e)}', start_time, end_time, 0)
+            return []
+    
+    def get_products_by_rating(self, min_rating: float) -> List[Dict]:
+        """Get products with minimum rating using MongoDB aggregation pipeline"""
+        if self.database is None:
+            return []
+        
+        start_time = time.time()
+        
+        try:
+            # Use aggregation pipeline to extract rating from text and filter
+            pipeline = [
+                {
+                    '$addFields': {
+                        'extracted_rating': {
+                            '$toDouble': {
+                                '$substr': [
+                                    {
+                                        '$substr': [
+                                            '$rating',
+                                            {'$indexOfBytes': ['$rating', 'Rated '] + 6},
+                                            {'$indexOfBytes': ['$rating', ' ']}
+                                        ]
+                                    },
+                                    0,
+                                    {'$indexOfBytes': [{'$substr': ['$rating', {'$indexOfBytes': ['$rating', 'Rated '] + 6}, {'$indexOfBytes': ['$rating', ' ']}]}, ' ']}
+                                ]
+                            }
+                        }
+                    }
+                },
+                {
+                    '$match': {
+                        'extracted_rating': {'$gte': min_rating}
+                    }
+                },
+                {
+                    '$project': {
+                        'extracted_rating': 0  # Remove the temporary field
+                    }
+                }
+            ]
+            
+            products_cursor = self.database.products.aggregate(pipeline)
+            products = []
+            
+            for product in products_cursor:
+                products.append({
+                    'id': product.get('id'),
+                    'name': product.get('name'),
+                    'description': product.get('description'),
+                    'price': product.get('price'),
+                    'image_url': product.get('image_url'),
+                    'stock': product.get('stock'),
+                    'category_id': product.get('category_id'),
+                    'is_available': product.get('is_available'),
+                    'rating': product.get('rating'),
+                    'discount': product.get('discount'),
+                    'feature': product.get('feature'),
+                    'product_description': product.get('product_description')
+                })
+            
+            end_time = time.time()
+            query_description = f"db.products.aggregate([{{$addFields: {{extracted_rating: ...}}}}, {{$match: {{extracted_rating: {{$gte: {min_rating}}}}}}}])"
+            self.log_query('AGGREGATE', query_description, start_time, end_time, len(products))
+            return products
+            
+        except Exception as e:
+            end_time = time.time()
+            self.log_query('AGGREGATE', f'db.products.aggregate rating filter ERROR: {str(e)}', start_time, end_time, 0)
+            return []
+    
+    def get_products_by_discount_status(self, has_discount: bool = True) -> List[Dict]:
+        """Get products by discount status using MongoDB find with filters"""
+        if self.database is None:
+            return []
+        
+        start_time = time.time()
+        
+        try:
+            if has_discount:
+                query_filter = {'discount': {'$ne': 'No Discount'}}
+            else:
+                query_filter = {'discount': 'No Discount'}
+            
+            products_cursor = self.database.products.find(query_filter)
+            products = []
+            
+            for product in products_cursor:
+                products.append({
+                    'id': product.get('id'),
+                    'name': product.get('name'),
+                    'description': product.get('description'),
+                    'price': product.get('price'),
+                    'image_url': product.get('image_url'),
+                    'stock': product.get('stock'),
+                    'category_id': product.get('category_id'),
+                    'is_available': product.get('is_available'),
+                    'rating': product.get('rating'),
+                    'discount': product.get('discount'),
+                    'feature': product.get('feature'),
+                    'product_description': product.get('product_description')
+                })
+            
+            end_time = time.time()
+            discount_status = "has discount" if has_discount else "no discount"
+            if has_discount:
+                query_description = 'db.products.find({discount: {$ne: "No Discount"}})'
+            else:
+                query_description = 'db.products.find({discount: "No Discount"})'
+            self.log_query('FIND', query_description, start_time, end_time, len(products))
+            return products
+            
+        except Exception as e:
+            end_time = time.time()
+            self.log_query('FIND', f'db.products.find discount filter ERROR: {str(e)}', start_time, end_time, 0)
+            return []
+    
+    def get_products_by_feature(self, feature_keyword: str) -> List[Dict]:
+        """Get products containing specific features using MongoDB text search"""
+        if self.database is None:
+            return []
+        
+        start_time = time.time()
+        
+        try:
+            # Use $or to search in both feature and product_description fields
+            query_filter = {
+                '$or': [
+                    {'feature': {'$regex': feature_keyword, '$options': 'i'}},
+                    {'product_description': {'$regex': feature_keyword, '$options': 'i'}}
+                ]
+            }
+            
+            products_cursor = self.database.products.find(query_filter)
+            products = []
+            
+            for product in products_cursor:
+                products.append({
+                    'id': product.get('id'),
+                    'name': product.get('name'),
+                    'description': product.get('description'),
+                    'price': product.get('price'),
+                    'image_url': product.get('image_url'),
+                    'stock': product.get('stock'),
+                    'category_id': product.get('category_id'),
+                    'is_available': product.get('is_available'),
+                    'rating': product.get('rating'),
+                    'discount': product.get('discount'),
+                    'feature': product.get('feature'),
+                    'product_description': product.get('product_description')
+                })
+            
+            end_time = time.time()
+            query_description = f"db.products.find({{$or: [{{feature: {{$regex: '{feature_keyword}', $options: 'i'}}}}, {{product_description: {{$regex: '{feature_keyword}', $options: 'i'}}}}]}})"
+            self.log_query('FIND', query_description, start_time, end_time, len(products))
+            return products
+            
+        except Exception as e:
+            end_time = time.time()
+            self.log_query('FIND', f'db.products.find feature filter ERROR: {str(e)}', start_time, end_time, 0)
+            return []
+    
+    def get_products_advanced_filter(self, 
+                                    min_price: Optional[float] = None,
+                                    max_price: Optional[float] = None,
+                                    min_rating: Optional[float] = None,
+                                    category_id: Optional[int] = None,
+                                    has_discount: Optional[bool] = None,
+                                    feature_keyword: Optional[str] = None) -> List[Dict]:
+        """Advanced product filtering with multiple criteria using MongoDB aggregation pipeline"""
+        if self.database is None:
+            return []
+        
+        start_time = time.time()
+        
+        try:
+            # Build match stage for filtering
+            match_stage = {}
+            
+            if min_price is not None or max_price is not None:
+                match_stage['price'] = {}
+                if min_price is not None:
+                    match_stage['price']['$gte'] = min_price
+                if max_price is not None:
+                    match_stage['price']['$lte'] = max_price
+            
+            if category_id is not None:
+                match_stage['category_id'] = category_id
+            
+            if has_discount is not None:
+                if has_discount:
+                    match_stage['discount'] = {'$ne': 'No Discount'}
+                else:
+                    match_stage['discount'] = 'No Discount'
+            
+            if feature_keyword is not None:
+                match_stage['$or'] = [
+                    {'feature': {'$regex': feature_keyword, '$options': 'i'}},
+                    {'product_description': {'$regex': feature_keyword, '$options': 'i'}}
+                ]
+            
+            # Build aggregation pipeline
+            pipeline = []
+            
+            # Add rating extraction if needed
+            if min_rating is not None:
+                pipeline.append({
+                    '$addFields': {
+                        'extracted_rating': {
+                            '$toDouble': {
+                                '$substr': [
+                                    {
+                                        '$substr': [
+                                            '$rating',
+                                            {'$indexOfBytes': ['$rating', 'Rated '] + 6},
+                                            {'$indexOfBytes': ['$rating', ' ']}
+                                        ]
+                                    },
+                                    0,
+                                    {'$indexOfBytes': [{'$substr': ['$rating', {'$indexOfBytes': ['$rating', 'Rated '] + 6}, {'$indexOfBytes': ['$rating', ' ']}]}, ' ']}
+                                ]
+                            }
+                        }
+                    }
+                })
+                
+                # Add rating filter to match stage
+                if 'extracted_rating' not in match_stage:
+                    match_stage['extracted_rating'] = {'$gte': min_rating}
+                else:
+                    match_stage['extracted_rating']['$gte'] = min_rating
+            
+            # Add match stage if we have filters
+            if match_stage:
+                pipeline.append({'$match': match_stage})
+            
+            # Remove temporary fields
+            if min_rating is not None:
+                pipeline.append({
+                    '$project': {
+                        'extracted_rating': 0
+                    }
+                })
+            
+            # Execute aggregation
+            products_cursor = self.database.products.aggregate(pipeline)
+            products = []
+            
+            for product in products_cursor:
+                products.append({
+                    'id': product.get('id'),
+                    'name': product.get('name'),
+                    'description': product.get('description'),
+                    'price': product.get('price'),
+                    'image_url': product.get('image_url'),
+                    'stock': product.get('stock'),
+                    'category_id': product.get('category_id'),
+                    'is_available': product.get('is_available'),
+                    'rating': product.get('rating'),
+                    'discount': product.get('discount'),
+                    'feature': product.get('feature'),
+                    'product_description': product.get('product_description')
+                })
+            
+            end_time = time.time()
+            
+            # Build query description
+            filters = []
+            if min_price is not None:
+                filters.append(f"price >= {min_price}")
+            if max_price is not None:
+                filters.append(f"price <= {max_price}")
+            if min_rating is not None:
+                filters.append(f"rating >= {min_rating}")
+            if category_id is not None:
+                filters.append(f"category_id = {category_id}")
+            if has_discount is not None:
+                filters.append(f"discount {'!=' if has_discount else '=='} 'No Discount'")
+            if feature_keyword is not None:
+                filters.append(f"feature CONTAINS '{feature_keyword}'")
+            
+            query_desc = f"db.products.aggregate([{{$match: {{...}}}}])" if filters else "db.products.aggregate([])"
+            self.log_query('AGGREGATE', query_desc, start_time, end_time, len(products))
+            return products
+            
+        except Exception as e:
+            end_time = time.time()
+            self.log_query('AGGREGATE', f'db.products.aggregate advanced filter ERROR: {str(e)}', start_time, end_time, 0)
+            return [] 

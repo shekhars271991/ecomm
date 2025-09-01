@@ -19,7 +19,11 @@ def init_api_resources(db, models, db_manager, utils):
     # Create all resource classes
     UserResource = create_user_resource(db, models, db_tracker, create_api_response)
     
-    CategoriesResource, ProductsResource, ProductResource = create_product_resources(
+    (CategoriesResource, ProductsResource, ProductResource, 
+     ProductsByPriceRangeResource, ProductsByRatingResource, 
+     ProductsByDiscountStatusResource, ProductsByFeatureResource,
+     ProductsByStockLevelResource, ProductsByAvailabilityResource,
+     ProductsAdvancedFilterResource) = create_product_resources(
         db_manager, time_api_call, create_api_response
     )
     
@@ -48,6 +52,13 @@ def init_api_resources(db, models, db_manager, utils):
         'CategoriesResource': CategoriesResource,
         'ProductsResource': ProductsResource,
         'ProductResource': ProductResource,
+        'ProductsByPriceRangeResource': ProductsByPriceRangeResource,
+        'ProductsByRatingResource': ProductsByRatingResource,
+        'ProductsByDiscountStatusResource': ProductsByDiscountStatusResource,
+        'ProductsByFeatureResource': ProductsByFeatureResource,
+        'ProductsByStockLevelResource': ProductsByStockLevelResource,
+        'ProductsByAvailabilityResource': ProductsByAvailabilityResource,
+        'ProductsAdvancedFilterResource': ProductsAdvancedFilterResource,
         'CartResource': CartResource,
         'CartItemResource': CartItemResource,
         'OrdersResource': OrdersResource,

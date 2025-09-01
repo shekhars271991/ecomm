@@ -216,3 +216,145 @@ class MySQLManager:
     def is_available(self) -> bool:
         """Check if MySQL is available"""
         return self.db is not None and self.Category is not None 
+    
+    # Filter operations
+    def get_products_by_price_range(self, min_price: float, max_price: float) -> List[Dict]:
+        """Get products within a specific price range using MySQL WHERE clause"""
+        if not self.Product:
+            return []
+            
+        start_time = time.time()
+        
+        query = self.Product.query.filter(
+            self.Product.price >= min_price,
+            self.Product.price <= max_price
+        )
+        
+        products = query.all()
+        end_time = time.time()
+        
+        query_description = f"SELECT * FROM products WHERE price BETWEEN {min_price} AND {max_price}"
+        self.log_query('SELECT', query_description, start_time, end_time, len(products))
+        
+        return [{
+            'id': p.id,
+            'name': p.name,
+            'description': p.description,
+            'price': float(p.price),
+            'image_url': p.image_url,
+            'stock': p.stock,
+            'category_id': p.category_id,
+            'is_available': p.is_available
+        } for p in products]
+    
+    def get_products_by_stock_level(self, min_stock: int = 0) -> List[Dict]:
+        """Get products with minimum stock level using MySQL WHERE clause"""
+        if not self.Product:
+            return []
+            
+        start_time = time.time()
+        
+        query = self.Product.query.filter(self.Product.stock >= min_stock)
+        products = query.all()
+        end_time = time.time()
+        
+        query_description = f"SELECT * FROM products WHERE stock >= {min_stock}"
+        self.log_query('SELECT', query_description, start_time, end_time, len(products))
+        
+        return [{
+            'id': p.id,
+            'name': p.name,
+            'description': p.description,
+            'price': float(p.price),
+            'image_url': p.image_url,
+            'stock': p.stock,
+            'category_id': p.category_id,
+            'is_available': p.is_available
+        } for p in products]
+    
+    def get_products_by_availability(self, is_available: bool = True) -> List[Dict]:
+        """Get products by availability status using MySQL WHERE clause"""
+        if not self.Product:
+            return []
+            
+        start_time = time.time()
+        
+        query = self.Product.query.filter(self.Product.is_available == is_available)
+        products = query.all()
+        end_time = time.time()
+        
+        availability_status = "available" if is_available else "unavailable"
+        query_description = f"SELECT * FROM products WHERE is_available = {is_available}"
+        self.log_query('SELECT', query_description, start_time, end_time, len(products))
+        
+        return [{
+            'id': p.id,
+            'name': p.name,
+            'description': p.description,
+            'price': float(p.price),
+            'image_url': p.image_url,
+            'stock': p.stock,
+            'category_id': p.category_id,
+            'is_available': p.is_available
+        } for p in products]
+    
+    def get_products_advanced_filter(self, 
+                                    min_price: Optional[float] = None,
+                                    max_price: Optional[float] = None,
+                                    min_rating: Optional[float] = None,
+                                    category_id: Optional[int] = None,
+                                    has_discount: Optional[bool] = None,
+                                    feature_keyword: Optional[str] = None,
+                                    min_stock: Optional[int] = None,
+                                    is_available: Optional[bool] = None,
+                                    search_term: Optional[str] = None) -> List[Dict]:
+        """Advanced product filtering with multiple criteria using MySQL WHERE clauses. Ignores min_rating, has_discount, feature_keyword."""
+        if not self.Product:
+            return []
+            
+        start_time = time.time()
+        
+        query = self.Product.query
+        filters = []
+        
+        if min_price is not None:
+            query = query.filter(self.Product.price >= min_price)
+            filters.append(f"price >= {min_price}")
+        
+        if max_price is not None:
+            query = query.filter(self.Product.price <= max_price)
+            filters.append(f"price <= {max_price}")
+        
+        if category_id is not None:
+            query = query.filter(self.Product.category_id == category_id)
+            filters.append(f"category_id = {category_id}")
+        
+        if min_stock is not None:
+            query = query.filter(self.Product.stock >= min_stock)
+            filters.append(f"stock >= {min_stock}")
+        
+        if is_available is not None:
+            query = query.filter(self.Product.is_available == is_available)
+            filters.append(f"is_available = {is_available}")
+        
+        if search_term is not None:
+            search_filter = self.Product.name.contains(search_term)
+            query = query.filter(search_filter)
+            filters.append(f"name LIKE '%{search_term}%'")
+        
+        products = query.all()
+        end_time = time.time()
+        
+        query_description = f"SELECT * FROM products WHERE {' AND '.join(filters)}" if filters else "SELECT * FROM products"
+        self.log_query('SELECT', query_description, start_time, end_time, len(products))
+        
+        return [{
+            'id': p.id,
+            'name': p.name,
+            'description': p.description,
+            'price': float(p.price),
+            'image_url': p.image_url,
+            'stock': p.stock,
+            'category_id': p.category_id,
+            'is_available': p.is_available
+        } for p in products] 

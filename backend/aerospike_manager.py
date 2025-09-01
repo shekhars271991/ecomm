@@ -376,3 +376,242 @@ class AerospikeManager:
         if self.aerospike_client:
             self.aerospike_client.close()
             self.aerospike_client = None 
+    
+    # Filter operations skr
+    def get_products_by_price_range(self, min_price: float, max_price: float) -> List[Dict]:
+        """Get products within a specific price range using Aerospike scan with filters"""
+        if not self.aerospike_client:
+            return []
+        
+        start_time = time.time()
+        products = []
+        
+        try:
+            scan = self.aerospike_client.scan('grocery', 'products')
+            
+            def scan_callback(input_tuple):
+                key, metadata, record = input_tuple
+                
+                # Get price and handle both string and float formats
+                price_raw = record.get('price', 0)
+                try:
+                    if isinstance(price_raw, str):
+                        # Remove currency symbols and whitespace if it's a string
+                        import re
+                        price_clean = re.sub(r'[^\d.]', '', price_raw.strip())
+                        price = float(price_clean)
+                    else:
+                        price = float(price_raw)
+                except (ValueError, TypeError):
+                    price = 0.0
+                
+                if min_price <= price <= max_price:
+                    products.append(record)
+            
+            scan.foreach(scan_callback)
+            end_time = time.time()
+            
+            self.log_query('SCAN_FILTER', f'SCAN grocery.products WHERE price BETWEEN {min_price} AND {max_price}', start_time, end_time, len(products))
+            return products
+            
+        except Exception as e:
+            end_time = time.time()
+            self.log_query('SCAN_FILTER', f'SCAN grocery.products price filter (ERROR: {str(e)})', start_time, end_time, 0)
+            return []
+    
+    def get_products_by_rating(self, min_rating: float) -> List[Dict]:
+        """Get products with minimum rating using Aerospike scan with filters"""
+        if not self.aerospike_client:
+            return []
+        
+        start_time = time.time()
+        products = []
+        
+        try:
+            scan = self.aerospike_client.scan('grocery', 'products')
+            
+            def scan_callback(input_tuple):
+                key, metadata, record = input_tuple
+                # Extract rating from "Rated X.X out of 5 stars" format
+                rating_text = record.get('rating', '')
+                if 'Rated' in rating_text:
+                    try:
+                        rating = float(rating_text.split('Rated ')[1].split(' ')[0])
+                        if rating >= min_rating:
+                            products.append(record)
+                    except:
+                        pass
+            
+            scan.foreach(scan_callback)
+            end_time = time.time()
+            
+            self.log_query('SCAN_FILTER', f'SCAN grocery.products WHERE rating >= {min_rating}', start_time, end_time, len(products))
+            return products
+            
+        except Exception as e:
+            end_time = time.time()
+            self.log_query('SCAN_FILTER', f'SCAN grocery.products rating filter (ERROR: {str(e)})', start_time, end_time, 0)
+            return []
+    
+    def get_products_by_discount_status(self, has_discount: bool = True) -> List[Dict]:
+        """Get products by discount status using Aerospike scan with filters"""
+        if not self.aerospike_client:
+            return []
+        
+        start_time = time.time()
+        products = []
+        
+        try:
+            scan = self.aerospike_client.scan('grocery', 'products')
+            
+            def scan_callback(input_tuple):
+                key, metadata, record = input_tuple
+                discount = record.get('discount', 'No Discount')
+                
+                if has_discount and discount != 'No Discount':
+                    products.append(record)
+                elif not has_discount and discount == 'No Discount':
+                    products.append(record)
+            
+            scan.foreach(scan_callback)
+            end_time = time.time()
+            
+            discount_status = "has discount" if has_discount else "no discount"
+            self.log_query('SCAN_FILTER', f'SCAN grocery.products WHERE {discount_status}', start_time, end_time, len(products))
+            return products
+            
+        except Exception as e:
+            end_time = time.time()
+            self.log_query('SCAN_FILTER', f'SCAN grocery.products discount filter (ERROR: {str(e)})', start_time, end_time, 0)
+            return []
+    
+    def get_products_by_feature(self, feature_keyword: str) -> List[Dict]:
+        """Get products containing specific features using Aerospike scan with filters"""
+        if not self.aerospike_client:
+            return []
+        
+        start_time = time.time()
+        products = []
+        
+        try:
+            scan = self.aerospike_client.scan('grocery', 'products')
+            
+            def scan_callback(input_tuple):
+                key, metadata, record = input_tuple
+                feature = record.get('feature', '').lower()
+                description = record.get('product_description', '').lower()
+                
+                if feature_keyword.lower() in feature or feature_keyword.lower() in description:
+                    products.append(record)
+            
+            scan.foreach(scan_callback)
+            end_time = time.time()
+            
+            self.log_query('SCAN_FILTER', f'SCAN grocery.products WHERE feature CONTAINS "{feature_keyword}"', start_time, end_time, len(products))
+            return products
+            
+        except Exception as e:
+            end_time = time.time()
+            self.log_query('SCAN_FILTER', f'SCAN grocery.products feature filter (ERROR: {str(e)})', start_time, end_time, 0)
+            return []
+    
+    def get_products_advanced_filter(self, 
+                                    min_price: Optional[float] = None,
+                                    max_price: Optional[float] = None,
+                                    min_rating: Optional[float] = None,
+                                    category_id: Optional[int] = None,
+                                    has_discount: Optional[bool] = None,
+                                    feature_keyword: Optional[str] = None,
+                                    min_stock: Optional[int] = None,
+                                    is_available: Optional[bool] = None,
+                                    search_term: Optional[str] = None) -> List[Dict]:
+        """Advanced product filtering with multiple criteria using Aerospike scan. Ignores min_stock, is_available, search_term."""
+        if not self.aerospike_client:
+            return []
+        
+        start_time = time.time()
+        products = []
+        
+        try:
+            scan = self.aerospike_client.scan('grocery', 'products')
+            
+            def scan_callback(input_tuple):
+                key, metadata, record = input_tuple
+                
+                # Get price once and handle both string and float formats
+                price_raw = record.get('price', 0)
+                try:
+                    if isinstance(price_raw, str):
+                        # Remove currency symbols and whitespace if it's a string
+                        import re
+                        price_clean = re.sub(r'[^\d.]', '', price_raw.strip())
+                        price = float(price_clean)
+                    else:
+                        price = float(price_raw)
+                except (ValueError, TypeError):
+                    price = 0.0
+                
+                # Apply all filters
+                if min_price is not None and price < min_price:
+                    return
+                
+                if max_price is not None and price > max_price:
+                    return
+                
+                if min_rating is not None:
+                    rating_text = record.get('rating', '')
+                    if 'Rated' in rating_text:
+                        try:
+                            rating = float(rating_text.split('Rated ')[1].split(' ')[0])
+                            if rating < min_rating:
+                                return
+                        except:
+                            return
+                    else:
+                        return
+                
+                if category_id is not None:
+                    if record.get('category_id') != category_id:
+                        return
+                
+                if has_discount is not None:
+                    discount = record.get('discount', 'No Discount')
+                    if has_discount and discount == 'No Discount':
+                        return
+                    elif not has_discount and discount != 'No Discount':
+                        return
+                
+                if feature_keyword is not None:
+                    feature = record.get('feature', '').lower()
+                    description = record.get('product_description', '').lower()
+                    if feature_keyword.lower() not in feature and feature_keyword.lower() not in description:
+                        return
+                
+                products.append(record)
+            
+            scan.foreach(scan_callback)
+            end_time = time.time()
+            
+            # Build query description
+            filters = []
+            if min_price is not None:
+                filters.append(f"price >= {min_price}")
+            if max_price is not None:
+                filters.append(f"price <= {max_price}")
+            if min_rating is not None:
+                filters.append(f"rating >= {min_rating}")
+            if category_id is not None:
+                filters.append(f"category_id = {category_id}")
+            if has_discount is not None:
+                filters.append(f"discount {'!=' if has_discount else '=='} 'No Discount'")
+            if feature_keyword is not None:
+                filters.append(f"feature CONTAINS '{feature_keyword}'")
+            
+            query_desc = f"SCAN grocery.products WHERE {' AND '.join(filters)}" if filters else "SCAN grocery.products"
+            self.log_query('SCAN_FILTER', query_desc, start_time, end_time, len(products))
+            return products
+            
+        except Exception as e:
+            end_time = time.time()
+            self.log_query('SCAN_FILTER', f'SCAN grocery.products advanced filter (ERROR: {str(e)})', start_time, end_time, 0)
+            return [] 
